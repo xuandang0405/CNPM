@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-gray-50 text-gray-800; }
+
+/* Dark theme */
+[data-theme="dark"] body { @apply bg-gray-900 text-gray-100 }
+[data-theme="dark"] .card { @apply bg-gray-800 }
+[data-theme="dark"] .muted { @apply text-gray-400 }
+[data-theme="dark"] .form-input { @apply bg-gray-700 text-gray-100 border-gray-600 }
+[data-theme="dark"] .heading { @apply text-white }
+
+/* App utilities */
+.app-container { @apply max-w-7xl mx-auto px-4 }
+.card { @apply bg-white rounded shadow p-4 }
+.muted { @apply text-gray-500 }
+.form-input { @apply w-full p-2 border rounded }
+.heading { @apply text-2xl font-semibold }
+
+/* Admin specific */
+.admin-sidebar { @apply w-72 bg-gray-800 text-white min-h-screen p-4 }
+.admin-header { @apply bg-white border-b }
+.app-container { @apply max-w-7xl mx-auto px-4 }
