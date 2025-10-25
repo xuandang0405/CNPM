@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { sendNotification } from '../../api/notifications'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 import { t } from '../../i18n'
 
 const TEMPLATES = [

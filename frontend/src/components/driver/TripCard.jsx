@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 import { t } from '../../i18n'
 
 export default function TripCard({ trip = { id: '1', name: 'Trip A - Morning', time: '07:00 - 08:30' } }){

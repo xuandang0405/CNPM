@@ -1,25 +1,55 @@
-// Mock API helpers for buses
-let buses = [
-  { id: 'bus-1', plate: '29A-0001', capacity: 30, driverId: 'driver-1' },
-  { id: 'bus-2', plate: '29A-0002', capacity: 25, driverId: 'driver-2' },
-]
+// src/api/buses.js
 
+import axios from './axios'; // Giả định bạn có file axios.js để cấu hình baseURL
+
+const BUS_API = '/buses'; 
+
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token'); // Lấy token từ localStorage
+    return {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    };
+};
+
+/** Lấy danh sách xe buýt. Gọi GET /api/buses. */
 export async function listBuses() {
-  return buses
+    try {
+        const response = await axios.get(BUS_API, getAuthHeaders());
+        return response.data; 
+    } catch (error) {
+        console.error('Error listing buses:', error);
+        return [];
+    }
 }
-export async function getBus(id) {
-  return buses.find(b => b.id === id)
+
+/** Tạo xe buýt mới. Gọi POST /api/buses. */
+export async function createBus(busData) {
+    try {
+        const response = await axios.post(BUS_API, busData, getAuthHeaders());
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to create bus');
+    }
 }
-export async function createBus(payload) {
-  const newBus = { id: 'bus-' + (buses.length + 1), ...payload }
-  buses.push(newBus)
-  return newBus
+
+/** Cập nhật xe buýt. Gọi PUT /api/buses/:id. */
+export async function updateBus(id, busData) {
+    try {
+        const response = await axios.put(`${BUS_API}/${id}`, busData, getAuthHeaders());
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to update bus');
+    }
 }
-export async function updateBus(id, payload) {
-  buses = buses.map(b => (b.id === id ? { ...b, ...payload } : b))
-  return getBus(id)
-}
+
+/** Xóa xe buýt. Gọi DELETE /api/buses/:id. */
 export async function deleteBus(id) {
-  buses = buses.filter(b => b.id !== id)
-  return true
+    try {
+        const response = await axios.delete(`${BUS_API}/${id}`, getAuthHeaders());
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to delete bus');
+    }
 }

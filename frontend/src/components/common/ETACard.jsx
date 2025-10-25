@@ -1,5 +1,5 @@
 import React from 'react'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 import { t } from '../../i18n'
 
 function haversineKm(lat1, lon1, lat2, lon2) {

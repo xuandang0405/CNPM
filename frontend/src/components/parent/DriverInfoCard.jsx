@@ -1,6 +1,6 @@
 import React from 'react'
 import { t } from '../../i18n'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 
 export default function DriverInfoCard({ driver = {} }){
   const { lang } = useUserStore()

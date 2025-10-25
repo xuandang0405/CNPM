@@ -1,8 +1,59 @@
-let routes = [
-  { id: 'route-1', name: 'Route 1', stops: [{ id: 's1', name: 'Stop 1', lat: 10.77, lng: 106.69 }] },
-]
-export async function listRoutes() { return routes }
-export async function getRoute(id) { return routes.find(r => r.id === id) }
-export async function createRoute(payload) { const newR = { id: 'route-' + (routes.length + 1), ...payload }; routes.push(newR); return newR }
-export async function updateRoute(id, payload) { routes = routes.map(r => (r.id === id ? { ...r, ...payload } : r)); return getRoute(id) }
-export async function deleteRoute(id) { routes = routes.filter(r => r.id !== id); return true }
+import axios from './axios'
+
+const ROUTES_API = '/routes'
+
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token')
+    return {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    }
+}
+
+export async function listRoutes() {
+    try {
+        const response = await axios.get(ROUTES_API, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        console.error('Error listing routes:', error)
+        return []
+    }
+}
+
+export async function getRoute(id) {
+    try {
+        const response = await axios.get(`${ROUTES_API}/${id}`, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        console.error('Error getting route:', error)
+        return null
+    }
+}
+
+export async function createRoute(payload) {
+    try {
+        const response = await axios.post(ROUTES_API, payload, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to create route')
+    }
+}
+
+export async function updateRoute(id, payload) {
+    try {
+        const response = await axios.put(`${ROUTES_API}/${id}`, payload, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to update route')
+    }
+}
+
+export async function deleteRoute(id) {
+    try {
+        const response = await axios.delete(`${ROUTES_API}/${id}`, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to delete route')
+    }
+}

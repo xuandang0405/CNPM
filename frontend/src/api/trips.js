@@ -1,0 +1,112 @@
+import axios from './axios';
+
+// Lấy lịch làm việc của driver hôm nay
+export const getDriverSchedule = async () => {
+  try {
+    const response = await axios.get('/trips/my-schedule');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching driver schedule:', error);
+    throw error;
+  }
+};
+
+// Lấy danh sách học sinh trong lịch trình
+export const getScheduleStudents = async (scheduleId) => {
+  try {
+    const response = await axios.get(`/trips/schedule/${scheduleId}/students`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching schedule students:', error);
+    throw error;
+  }
+};
+
+// Cập nhật trạng thái chuyến đi của học sinh
+export const updateTripStatus = async (tripId, status, notes = null) => {
+  try {
+    const response = await axios.put(`/trips/${tripId}/status`, { 
+      status,
+      notes 
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating trip status:', error);
+    throw error;
+  }
+};
+
+// Gửi cảnh báo khẩn cấp
+export const sendEmergencyAlert = async (alertType = 'emergency', message) => {
+  try {
+    const response = await axios.post('/trips/emergency', {
+      alert_type: alertType,
+      message
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error sending emergency alert:', error);
+    throw error;
+  }
+};
+
+// Cập nhật vị trí thời gian thực
+export const updateDriverLocation = async (lat, lng, speed = 0, heading = 0, accuracy = 10) => {
+  try {
+    const response = await axios.post('/trips/location', {
+      lat,
+      lng,
+      speed,
+      heading,
+      accuracy
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating location:', error);
+    throw error;
+  }
+};
+
+// Lấy thông tin điểm dừng của tuyến đường
+export const getRouteStops = async (routeId) => {
+  try {
+    const response = await axios.get(`/trips/route/${routeId}/stops`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching route stops:', error);
+    throw error;
+  }
+};
+
+// Test kết nối database
+export const testDatabaseConnection = async () => {
+  try {
+    const response = await axios.get('/trips/test');
+    return response.data;
+  } catch (error) {
+    console.error('Error testing database connection:', error);
+    throw error;
+  }
+};
+
+// Bắt đầu chuyến đi
+export const startTrip = async (scheduleId) => {
+  try {
+    const response = await axios.post(`/trips/schedule/${scheduleId}/start`);
+    return response.data;
+  } catch (error) {
+    console.error('Error starting trip:', error);
+    throw error;
+  }
+};
+
+// Kết thúc chuyến đi
+export const completeTrip = async (scheduleId) => {
+  try {
+    const response = await axios.post(`/trips/schedule/${scheduleId}/complete`);
+    return response.data;
+  } catch (error) {
+    console.error('Error completing trip:', error);
+    throw error;
+  }
+};

@@ -1,7 +1,7 @@
 import React from 'react'
 import Button from './Button'
 import { t } from '../../i18n'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 
 export default function BusStatusList({ buses = [] }) {
   const { lang } = useUserStore()

@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
-import useUserStore from './store/useUserStore'
+import { useUserStore } from './store/useUserStore'
+import ErrorBoundary from './components/common/ErrorBoundary'
+import { LanguageProvider } from './contexts/LanguageContext'
 
 function ThemeApplier({ children }){
   const { theme } = useUserStore()
@@ -15,10 +17,14 @@ function ThemeApplier({ children }){
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ThemeApplier>
-        <App />
-      </ThemeApplier>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <LanguageProvider>
+          <ThemeApplier>
+            <App />
+          </ThemeApplier>
+        </LanguageProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 )

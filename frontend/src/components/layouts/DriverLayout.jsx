@@ -1,32 +1,250 @@
-import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
-import Home from '../../pages/driver/Home'
-import Trip from '../../pages/driver/Trip'
-import LanguageSwitcher from '../../components/common/LanguageSwitcher'
-import ThemeSwitcher from '../../components/common/ThemeSwitcher'
-import useUserStore from '../../store/useUserStore'
-import { t } from '../../i18n'
+import React, { useState } from 'react';
+import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
+import { 
+  Home, 
+  Map, 
+  Users, 
+  Clock, 
+  AlertTriangle, 
+  Settings, 
+  LogOut,
+  Menu,
+  X,
+  Bus,
+  Sun,
+  Moon,
+  Bell,
+  Languages
+} from 'lucide-react';
+import { useUserStore } from '../../store/useUserStore';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { t } from '../../i18n';
+import NotificationBadge from '../common/NotificationBadge';
+import DriverHome from '../../pages/driver/Home';
+import DriverMap from '../../pages/driver/Map';
+import DriverTrip from '../../pages/driver/Trip';
+import DriverNotifications from '../../pages/driver/Notifications';
 
 export default function DriverLayout() {
-  const { lang } = useUserStore()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, clearUser } = useUserStore();
+  const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage } = useLanguage();
+
+  const navigation = [
+    { name: t(language, 'home'), href: 'home', icon: Home },
+    { name: t(language, 'map'), href: 'map', icon: Map },
+  ];
+
+  const handleLogout = () => {
+    try { localStorage.removeItem('token'); } catch(e) {}
+    clearUser();
+    navigate('/login');
+  };
+
+  const isCurrentPath = (path) => {
+    return location.pathname === `/driver/${path}` || (path === 'home' && location.pathname === '/driver');
+  };
+
   return (
-    <div className="min-h-screen">
-      <header className="bg-white p-4 border-b flex justify-between items-center">
-        <h3 className="font-bold">{t(lang,'drivers')}</h3>
-        <div className="flex items-center gap-4">
-          <nav>
-            <Link to="/driver">Home</Link>
-          </nav>
-          <LanguageSwitcher />
-          <ThemeSwitcher />
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
         </div>
-      </header>
-      <main className="p-4">
-        <Routes>
-          <Route path="" element={<Home />} />
-          <Route path="trip/:id" element={<Trip />} />
-        </Routes>
-      </main>
+      )}
+
+      {/* Sidebar */}
+      <div className={`${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } fixed inset-y-0 left-0 z-50 w-72 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 border-r border-white/20 dark:border-gray-700/50`}>
+        
+        {/* Logo & Brand */}
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600"></div>
+          <div className="relative flex items-center justify-between h-20 px-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg transform hover:scale-110 transition-transform duration-300">
+                <Bus className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">
+                  {t(language, 'driver_panel')}
+                </h1>
+                <p className="text-xs text-blue-100">
+                  {t(language, 'smart_school_bus')}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* User Info */}
+        <div className="px-6 py-5 border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50">
+            <div className="relative">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
+                <span className="text-lg font-bold text-white">
+                  {user?.full_name?.charAt(0) || 'D'}
+                </span>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {user?.full_name || t(language, 'driver_role')}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                {t(language, 'online')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="px-4 py-6 space-y-2">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const current = isCurrentPath(item.href);
+            
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`${
+                  current
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/50 scale-105'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60 hover:shadow-md'
+                } group flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 transform hover:scale-105`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <div className={`${
+                  current 
+                    ? 'bg-white/20' 
+                    : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30'
+                } p-2 rounded-lg mr-3 transition-colors duration-200`}>
+                  <Icon className={`${
+                    current 
+                      ? 'text-white' 
+                      : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                  } h-5 w-5 transition-colors duration-200`} />
+                </div>
+                {item.name}
+              </Link>
+            );
+          })}
+          
+          {/* Notification Badge as separate item */}
+          <div className="pt-2">
+            <NotificationBadge role="driver" className="w-full" />
+          </div>
+        </nav>
+
+        {/* Quick Actions */}
+        <div className="px-4 space-y-2">
+          <p className="px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+            {t(language, 'utilities')}
+          </p>
+          
+          {/* Language Toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group"
+          >
+            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 mr-3 group-hover:scale-110 transition-transform duration-200">
+              <Languages className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            {language === 'vi' ? 'English' : 'Tiếng Việt'}
+          </button>
+          
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group"
+          >
+            <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 mr-3 group-hover:scale-110 transition-transform duration-200">
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              ) : (
+                <Moon className="h-5 w-5 text-indigo-600" />
+              )}
+            </div>
+            {t(language, theme === 'dark' ? 'light_mode' : 'dark_mode')}
+          </button>
+
+          {/* Emergency Alert Button */}
+          <button className="w-full flex items-center px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group border-2 border-transparent hover:border-red-200 dark:hover:border-red-800">
+            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 mr-3 group-hover:scale-110 transition-transform duration-200">
+              <AlertTriangle className="h-5 w-5 animate-pulse" />
+            </div>
+            {t(language, 'emergency_report')}
+          </button>
+        </div>
+
+        {/* Logout */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group"
+          >
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 mr-3 group-hover:scale-110 transition-all duration-200">
+              <LogOut className="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-200" />
+            </div>
+            {t(language, 'logout')}
+          </button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top header for mobile */}
+        <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-gray-700/50 lg:hidden sticky top-0 z-30">
+          <div className="flex items-center justify-between h-16 px-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2.5 rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-110"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              {t(language, 'driver_dashboard')}
+            </h1>
+            <div className="relative">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
+                <span className="text-sm font-bold text-white">
+                  {user?.full_name?.charAt(0) || 'D'}
+                </span>
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <Routes>
+            <Route index element={<Navigate to="home" replace />} />
+            <Route path="home" element={<DriverHome />} />
+            <Route path="map" element={<DriverMap />} />
+            <Route path="trip/:id?" element={<DriverTrip />} />
+            <Route path="notifications" element={<DriverNotifications />} />
+          </Routes>
+        </main>
+      </div>
     </div>
-  )
+  );
 }

@@ -1,15 +1,14 @@
 import { useCallback } from 'react'
-import useUserStore from '../store/useUserStore'
+import { useUserStore } from '../store/useUserStore'
+import { loginUser } from '../api/users'
 
-// Mocked useAuth hook. In real app, call backend for token and user info.
 export function useAuth() {
   const { user, setUser, clearUser } = useUserStore()
 
-  const login = useCallback(async ({ username, password }) => {
-    // Mock: accept any credentials and assign role based on username prefix
-    const role = username.startsWith('admin') ? 'admin' : username.startsWith('driver') ? 'driver' : 'parent'
-    const token = 'mock-token-' + Math.random().toString(36).slice(2)
-    const userInfo = { username, role, token }
+  const login = useCallback(async ({ email, password }) => {
+    const data = await loginUser({ email, password })
+    const userInfo = { id: data.id, email: data.email, token: data.token, role: data.role }
+    // setUser will handle saving to both sessionStorage and localStorage
     setUser(userInfo)
     return userInfo
   }, [setUser])

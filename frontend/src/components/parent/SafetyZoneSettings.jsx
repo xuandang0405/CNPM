@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { t } from '../../i18n'
-import useUserStore from '../../store/useUserStore'
+import { useUserStore } from '../../store/useUserStore'
 
 export default function SafetyZoneSettings({ value = 500, onChange }){
   const [radius, setRadius] = useState(value)
