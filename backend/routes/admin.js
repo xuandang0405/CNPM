@@ -376,15 +376,15 @@ router.post('/schedules', adminMiddleware, async (req, res) => {
     
     console.log(`Created schedule ${scheduleId}`)
     
-    // Auto-create trips for students assigned to this bus and route
+    // Auto-create trips for students assigned to this route (bus is optional)
     if (bus_id) {
       const [students] = await pool.query(
-        'SELECT id FROM students WHERE assigned_bus_id = ? AND assigned_route_id = ?',
-        [bus_id, route_id]
+        'SELECT id FROM students WHERE assigned_route_id = ?',
+        [route_id]
       )
-      
-      console.log(`Found ${students.length} students for bus ${bus_id} and route ${route_id}`)
-      
+
+      console.log(`Found ${students.length} students for route ${route_id} (bus ${bus_id})`)
+
       for (const student of students) {
         const tripId = uuidv4()
         await pool.query(
@@ -392,7 +392,7 @@ router.post('/schedules', adminMiddleware, async (req, res) => {
           [tripId, scheduleId, student.id, 'scheduled']
         )
       }
-      
+
       console.log(`Auto-created ${students.length} trips for schedule ${scheduleId}`)
     }
     
@@ -549,7 +549,7 @@ router.get('/students', adminMiddleware, async (req, res) => {
       `SELECT 
         s.id, s.full_name, s.grade, s.class, 
         s.parent_user_id, s.assigned_route_id, s.assigned_stop_id, s.assigned_bus_id,
-        s.address, s.home_lat, s.home_lng, s.created_at, 
+        s.address, s.created_at, 
         rs.name as stop_name, r.name as route_name, u.full_name as parent_name,
         b.plate as bus_plate
       FROM students s 
@@ -664,3 +664,164 @@ router.get('/stats', adminMiddleware, async (req, res) => {
 })
 
 export default router
+ 
+// ===== RECENT ACTIVITY (Admin Dashboard) =====
+// Returns a merged, time-ordered list of recent activities across key tables
+router.get('/recent-activity', adminMiddleware, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '20', 10) || 20, 100)
+    const lookbackHours = Math.min(parseInt(req.query.hours || '48', 10) || 48, 168)
+
+    // Time window filter
+    const [nowRows] = await pool.query('SELECT NOW() as now')
+    const now = new Date(nowRows[0]?.now || Date.now())
+    const since = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000)
+
+    // Helper to normalize events
+    const toEvent = (e) => ({
+      id: e.id,
+      type: e.type,
+      title: e.title,
+      description: e.description || null,
+      actor: e.actor || null,
+      status: e.status || null,
+      severity: e.severity || null,
+      priority: e.priority || null,
+      icon: e.icon || null,
+      color: e.color || null,
+      created_at: e.created_at,
+      timestamp: new Date(e.created_at).getTime(),
+      ref: e.ref || null
+    })
+
+    // 1) Notifications
+    const [notifRows] = await pool.query(
+      `SELECT n.id, n.title, n.body, n.priority, n.type as notif_type, n.created_at, n.sender_role, u.full_name as sender_name
+       FROM notifications n
+       LEFT JOIN users u ON n.sender_id = u.id
+       WHERE n.created_at >= ?
+       ORDER BY n.created_at DESC
+       LIMIT 50`,
+      [since]
+    )
+    const notifEvents = (notifRows || []).map(n => toEvent({
+      id: `notif:${n.id}`,
+      type: 'notification',
+      title: n.title,
+      description: n.body || null,
+      actor: n.sender_name || n.sender_role || 'system',
+      priority: n.priority,
+      icon: 'bell',
+      color: 'blue',
+      created_at: n.created_at,
+      ref: { notification_id: n.id, sender_role: n.sender_role }
+    }))
+
+    // 2) Trip updates
+    const [tripRows] = await pool.query(
+      `SELECT t.id, t.status, t.updated_at, s.full_name as student_name, sch.scheduled_date
+       FROM trips t
+       LEFT JOIN students s ON t.student_id = s.id
+       LEFT JOIN schedules sch ON t.schedule_id = sch.id
+       WHERE t.updated_at >= ?
+       ORDER BY t.updated_at DESC
+       LIMIT 50`,
+      [since]
+    )
+    const statusTitle = {
+      waiting: 'Trip scheduled',
+      picked: 'Student picked up',
+      onboard: 'Student onboard',
+      dropped: 'Student dropped off',
+      absent: 'Student marked absent',
+      cancelled: 'Trip cancelled'
+    }
+    const statusColor = {
+      waiting: 'gray',
+      picked: 'green',
+      onboard: 'blue',
+      dropped: 'teal',
+      absent: 'orange',
+      cancelled: 'red'
+    }
+    const tripEvents = (tripRows || []).map(t => toEvent({
+      id: `trip:${t.id}:${new Date(t.updated_at).getTime()}`,
+      type: 'trip',
+      title: statusTitle[t.status] || `Trip ${t.status}`,
+      description: t.student_name ? `${t.student_name}` : null,
+      status: t.status,
+      icon: 'route',
+      color: statusColor[t.status] || 'gray',
+      created_at: t.updated_at,
+      ref: { trip_id: t.id }
+    }))
+
+    // 3) Schedule changes
+    const [schedRows] = await pool.query(
+      `SELECT sc.id, sc.status, sc.created_at, sc.updated_at, sc.scheduled_date, sc.start_time, sc.end_time,
+              r.name as route_name, b.plate as bus_plate
+       FROM schedules sc
+       LEFT JOIN routes r ON sc.route_id = r.id
+       LEFT JOIN buses b ON sc.bus_id = b.id
+       WHERE sc.updated_at >= ?
+       ORDER BY sc.updated_at DESC
+       LIMIT 50`,
+      [since]
+    )
+    const schedTitle = {
+      scheduled: 'Schedule created',
+      active: 'Schedule started',
+      completed: 'Schedule completed',
+      cancelled: 'Schedule cancelled'
+    }
+    const schedColor = {
+      scheduled: 'gray',
+      active: 'green',
+      completed: 'blue',
+      cancelled: 'red'
+    }
+    const schedEvents = (schedRows || []).map(sc => toEvent({
+      id: `schedule:${sc.id}:${new Date(sc.updated_at).getTime()}`,
+      type: 'schedule',
+      title: schedTitle[sc.status] || `Schedule ${sc.status}`,
+      description: `${sc.route_name || 'Route'} • Bus ${sc.bus_plate || 'N/A'} • ${sc.scheduled_date} ${sc.start_time || ''}`.trim(),
+      status: sc.status,
+      icon: 'calendar',
+      color: schedColor[sc.status] || 'gray',
+      created_at: sc.updated_at,
+      ref: { schedule_id: sc.id }
+    }))
+
+    // (Removed) Emergency alerts aggregation
+
+    // 5) Recent bus updates
+    const [busRows] = await pool.query(
+      `SELECT id, plate, last_update
+       FROM buses
+       WHERE last_update IS NOT NULL AND last_update >= ?
+       ORDER BY last_update DESC
+       LIMIT 50`,
+      [since]
+    )
+    const busEvents = (busRows || []).map(b => toEvent({
+      id: `bus:${b.id}:${new Date(b.last_update).getTime()}`,
+      type: 'bus',
+      title: 'Bus location update',
+      description: `Bus ${b.plate}`,
+      icon: 'bus',
+      color: 'indigo',
+      created_at: b.last_update,
+      ref: { bus_id: b.id }
+    }))
+
+    // Merge, sort, slice
+  const merged = [...notifEvents, ...tripEvents, ...schedEvents, ...busEvents]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit)
+
+    res.json({ count: merged.length, items: merged })
+  } catch (err) {
+    console.error('admin/recent-activity error', err)
+    res.status(500).json({ error: 'internal_error' })
+  }
+})

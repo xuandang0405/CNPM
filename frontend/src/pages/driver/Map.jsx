@@ -1,17 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, AlertTriangle, Play, Pause, Users, Crosshair, Plus, Minus, Layers, Route, Target, ArrowLeft } from 'lucide-react';
+import { MapPin, Navigation, Play, Pause, Users, Crosshair, Plus, Minus, Layers, Route, Target, ArrowLeft } from 'lucide-react';
 import { getScheduleStudents, updateTripStatus } from '../../api/trips';
+import { useUserStore } from '../../store/useUserStore';
+import { t } from '../../i18n';
+ 
 
 const DriverMap = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { lang } = useUserStore();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const routingControlRef = useRef(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
   const [alert, setAlert] = useState(null);
+  
+
+  
+
   const [zoom, setZoom] = useState(16);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapType, setMapType] = useState('street');
@@ -68,7 +76,7 @@ const DriverMap = () => {
   // Handler for pickup/dropoff student
   const handleUpdateStudentStatus = async (student, newStatus) => {
     if (!student.trip_id) {
-      setAlert({ type: 'error', message: 'Không tìm thấy trip ID!' });
+  setAlert({ type: 'error', message: t(lang, 'not_found') + ' trip ID' });
       return;
     }
 
@@ -89,14 +97,14 @@ const DriverMap = () => {
             : s
         ));
 
-        const statusText = newStatus === 'onboard' ? 'đã lên xe' : 
-                          newStatus === 'dropped' ? 'đã trả' : 
-                          newStatus === 'absent' ? 'vắng mặt' : 'cập nhật';
-        setAlert({ type: 'success', message: `✅ ${student.student_name} ${statusText}!` });
+  const statusText = newStatus === 'onboard' ? t(lang, 'on_bus') : 
+        newStatus === 'dropped' ? t(lang, 'dropped_off') : 
+        newStatus === 'absent' ? t(lang, 'absent') : t(lang, 'status');
+  setAlert({ type: 'success', message: `✅ ${student.student_name} - ${statusText}` });
       }
     } catch (error) {
       console.error('Error updating student status:', error);
-      setAlert({ type: 'error', message: 'Không thể cập nhật trạng thái!' });
+  setAlert({ type: 'error', message: t(lang, 'update_status_failed') });
     }
   };
 
@@ -112,7 +120,7 @@ const DriverMap = () => {
           }
         } catch (error) {
           console.error('Error fetching students:', error);
-          setAlert({ type: 'error', message: 'Không thể tải danh sách học sinh' });
+          setAlert({ type: 'error', message: t(lang, 'load_students_failed') });
         } finally {
           setLoading(false);
         }
@@ -188,7 +196,7 @@ const DriverMap = () => {
 
       } catch (error) {
         console.error('Error initializing map:', error);
-        setAlert({ type: 'error', message: 'Không thể tải bản đồ' });
+  setAlert({ type: 'error', message: t(lang, 'map_load_failed') });
         setMapLoaded(false);
       }
     };
@@ -211,7 +219,7 @@ const DriverMap = () => {
       const defaultLocation = { lat: 10.8231, lng: 106.6297, accuracy: 100 };
       setCurrentLocation(defaultLocation);
       updateMapMarkers(defaultLocation);
-      setAlert({ type: 'info', message: 'Sử dụng vị trí mặc định (TP.HCM)' });
+  setAlert({ type: 'info', message: t(lang, 'using_default_location_hcm') });
       return;
     }
 
@@ -225,14 +233,14 @@ const DriverMap = () => {
         };
         setCurrentLocation(location);
         updateMapMarkers(location);
-        setAlert({ type: 'success', message: 'Đã cập nhật vị trí thành công!' });
+  setAlert({ type: 'success', message: t(lang, 'location_updated') });
       },
       (error) => {
         console.error('GPS Error:', error);
         const defaultLocation = { lat: 10.8231, lng: 106.6297, accuracy: 100 };
         setCurrentLocation(defaultLocation);
         updateMapMarkers(defaultLocation);
-        setAlert({ type: 'warning', message: 'Không thể lấy GPS, sử dụng vị trí mặc định' });
+  setAlert({ type: 'warning', message: t(lang, 'cannot_get_gps_using_default') });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
@@ -240,7 +248,7 @@ const DriverMap = () => {
 
   const startTracking = () => {
     if (!navigator.geolocation) {
-      setAlert({ type: 'error', message: 'Thiết bị không hỗ trợ GPS' });
+  setAlert({ type: 'error', message: t(lang, 'device_no_gps') });
       return;
     }
 
@@ -258,11 +266,11 @@ const DriverMap = () => {
       },
       (error) => {
         console.error('GPS tracking error:', error);
-        setAlert({ type: 'error', message: 'Lỗi GPS tracking' });
+  setAlert({ type: 'error', message: t(lang, 'gps_tracking_error') });
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
     );
-    setAlert({ type: 'success', message: 'Bắt đầu theo dõi GPS' });
+  setAlert({ type: 'success', message: t(lang, 'started_gps_tracking') });
   };
 
   const stopTracking = () => {
@@ -271,7 +279,7 @@ const DriverMap = () => {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    setAlert({ type: 'info', message: 'Đã dừng theo dõi GPS' });
+  setAlert({ type: 'info', message: t(lang, 'stopped_gps_tracking') });
   };
 
   const updateMapMarkers = async (location) => {
@@ -307,13 +315,13 @@ const DriverMap = () => {
 
       driverMarker.bindPopup(`
         <div class="p-3 font-sans">
-          <h3 class="font-bold text-lg text-gray-800 mb-2">🚌 Xe Buýt Trường Học</h3>
+          <h3 class="font-bold text-lg text-gray-800 mb-2">🚌 ${t(lang,'smart_school_bus')}</h3>
           <div class="space-y-1 text-sm text-gray-600">
-            <div><strong>Vĩ độ:</strong> ${location.lat.toFixed(6)}</div>
-            <div><strong>Kinh độ:</strong> ${location.lng.toFixed(6)}</div>
-            <div><strong>Độ chính xác:</strong> ±${location.accuracy}m</div>
+            <div><strong>${t(lang,'latitude')}:</strong> ${location.lat.toFixed(6)}</div>
+            <div><strong>${t(lang,'longitude')}:</strong> ${location.lng.toFixed(6)}</div>
+            <div><strong>${t(lang,'accuracy')}:</strong> ±${location.accuracy}m</div>
             <div class="mt-2 px-2 py-1 rounded ${isTracking ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-              ${isTracking ? '🟢 Đang theo dõi GPS' : '🔴 GPS tạm dừng'}
+              ${isTracking ? '🟢 ' + t(lang,'tracking_label') : '🔴 ' + t(lang,'paused')}
             </div>
           </div>
         </div>
@@ -370,33 +378,32 @@ const DriverMap = () => {
         icon: studentIcon
       }).addTo(mapInstanceRef.current);
 
-      const statusText = {
-        'scheduled': '📅 Đã lên lịch',
-        'waiting': '⏳ Chờ đón',
-        'onboard': '🚌 Đang trên xe',
-        'dropped': '✅ Đã trả',
-        'absent': '❌ Vắng mặt'
-      };
+      const statusText =
+        student.trip_status === 'scheduled' ? `📅 ${t(lang,'scheduled')}` :
+        student.trip_status === 'waiting' ? `⏳ ${t(lang,'waiting_pickup')}` :
+        student.trip_status === 'onboard' ? `🚌 ${t(lang,'on_bus')}` :
+        student.trip_status === 'dropped' ? `✅ ${t(lang,'dropped_off')}` :
+        `❌ ${t(lang,'absent')}`;
 
       const locationInfo = student.location_source === 'home' 
-        ? '<div class="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded mt-1">📍 Địa chỉ nhà (chưa có điểm dừng)</div>'
+        ? `<div class="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded mt-1">📍 ${t(lang,'home_address')} (${t(lang,'no_stop_assigned_short')})</div>`
         : student.stop_name 
-        ? `<div><strong>Điểm đón:</strong> ${student.stop_name}</div>`
+        ? `<div><strong>${t(lang,'pickup_stop')}:</strong> ${student.stop_name}</div>`
         : '';
 
       studentMarker.bindPopup(`
         <div class="p-3 font-sans">
           <h3 class="font-bold text-lg text-gray-800 mb-2">👤 ${student.student_name}</h3>
           <div class="text-sm text-gray-600 space-y-1">
-            <div><strong>Lớp:</strong> ${student.grade || 'N/A'} - ${student.class || 'N/A'}</div>
+            <div><strong>${t(lang,'grade_level')}:</strong> ${student.grade || t(lang,'unknown')} - <strong>${t(lang,'class_name')}:</strong> ${student.class || t(lang,'unknown')}</div>
             ${locationInfo}
-            ${student.student_address ? `<div><strong>Địa chỉ:</strong> ${student.student_address}</div>` : ''}
-            <div><strong>Thứ tự:</strong> #${student.stop_order || 'N/A'}</div>
-            <div><strong>Phụ huynh:</strong> ${student.parent_name || 'N/A'}</div>
-            ${student.parent_phone ? `<div><strong>SĐT:</strong> ${student.parent_phone}</div>` : ''}
+            ${student.student_address ? `<div><strong>${t(lang,'home_address')}:</strong> ${student.student_address}</div>` : ''}
+            <div><strong>${t(lang,'order')}:</strong> #${student.stop_order || t(lang,'unknown')}</div>
+            <div><strong>${t(lang,'parent_label')}:</strong> ${student.parent_name || t(lang,'unknown')}</div>
+            ${student.parent_phone ? `<div><strong>${t(lang,'phone')}:</strong> ${student.parent_phone}</div>` : ''}
             <div class="mt-2">
               <span class="${student.trip_status === 'waiting' || student.trip_status === 'scheduled' ? 'text-orange-600 bg-orange-100' : student.trip_status === 'onboard' ? 'text-blue-600 bg-blue-100' : 'text-green-600 bg-green-100'} px-2 py-1 rounded font-bold text-xs">
-                ${statusText[student.trip_status] || student.trip_status}
+                ${statusText}
               </span>
             </div>
           </div>
@@ -444,7 +451,7 @@ const DriverMap = () => {
   // Navigation to student using routing
   const navigateToStudent = async (student) => {
     if (!mapInstanceRef.current || !currentLocation) {
-      setAlert({ type: 'error', message: 'Không thể tạo đường đi' });
+      setAlert({ type: 'error', message: t(lang, 'cannot_create_route') });
       return;
     }
 
@@ -453,7 +460,7 @@ const DriverMap = () => {
     const targetLng = student.display_lng || student.stop_lng || student.student_home_lng;
 
     if (!targetLat || !targetLng) {
-      setAlert({ type: 'error', message: 'Học sinh chưa có tọa độ điểm đón hoặc địa chỉ nhà' });
+      setAlert({ type: 'error', message: t(lang, 'no_stop_assigned_short') });
       return;
     }
 
@@ -504,7 +511,7 @@ const DriverMap = () => {
 
         setAlert({ 
           type: 'success', 
-          message: `Đã tìm thấy đường đến ${student.student_name}: ${(summary.totalDistance / 1000).toFixed(1)}km - ${Math.round(summary.totalTime / 60)} phút` 
+          message: `${t(lang,'navigating_to_prefix')} ${student.student_name}: ${(summary.totalDistance / 1000).toFixed(1)} km - ${Math.round(summary.totalTime / 60)} ${t(lang,'minutes')}` 
         });
       });
 
@@ -513,7 +520,7 @@ const DriverMap = () => {
 
     } catch (error) {
       console.error('Error creating route:', error);
-      setAlert({ type: 'error', message: 'Không thể tạo đường đi. Sử dụng đường thẳng.' });
+  setAlert({ type: 'error', message: t(lang, 'cannot_create_route_fallback_line') });
       
       // Fallback: draw straight line
       drawStraightLine(student);
@@ -560,9 +567,9 @@ const DriverMap = () => {
       mapInstanceRef.current.removeControl(routingControlRef.current);
       routingControlRef.current = null;
     }
-    setSelectedStudent(null);
-    setRouteInfo(null);
-    setAlert({ type: 'info', message: 'Đã xóa đường đi' });
+  setSelectedStudent(null);
+  setRouteInfo(null);
+  setAlert({ type: 'info', message: t(lang, 'route_cleared') });
   };
 
   const zoomIn = () => {
@@ -583,8 +590,8 @@ const DriverMap = () => {
 
   const centerOnLocation = () => {
     if (currentLocation && mapInstanceRef.current) {
-      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 17);
-      setAlert({ type: 'success', message: 'Đã về vị trí hiện tại' });
+  mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 17);
+  setAlert({ type: 'success', message: t(lang, 'centered_on_current_location') });
     } else {
       getCurrentLocation();
     }
@@ -609,14 +616,14 @@ const DriverMap = () => {
           attribution: 'Esri'
         }).addTo(mapInstanceRef.current);
         setMapType('satellite');
-        setAlert({ type: 'info', message: 'Chuyển sang bản đồ vệ tinh' });
+        setAlert({ type: 'info', message: t(lang, 'switch_to_satellite') });
       } else {
         const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: 'OpenStreetMap'
         }).addTo(mapInstanceRef.current);
         setMapType('street');
-        setAlert({ type: 'info', message: 'Chuyển sang bản đồ đường phố' });
+        setAlert({ type: 'info', message: t(lang, 'switch_to_street') });
       }
     } catch (error) {
       console.error('Error switching map type:', error);
@@ -645,18 +652,18 @@ const DriverMap = () => {
             <button
               onClick={() => navigate('/driver/home')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Quay lại"
+              title={t(lang, 'back')}
             >
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
                 <MapPin className="h-6 w-6 mr-2 text-blue-600" />
-                Bản đồ chuyến đi
+                {t(lang, 'trip_map')}
               </h1>
               {schedule && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Tuyến: {schedule.route_name} | Xe: {schedule.bus_plate} | {students.length} học sinh
+                  {t(lang,'route_label')}: {schedule.route_name} | {t(lang,'bus_label')}: {schedule.bus_plate} | {students.length} {t(lang,'students')}
                 </p>
               )}
             </div>
@@ -664,12 +671,12 @@ const DriverMap = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
               <MapPin className="h-6 w-6 mr-3 text-blue-600" />
-              Smart School Bus Map
+              {t(lang,'smart_school_bus')} {t(lang,'map')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              GPS: {isTracking ? '🟢 Hoạt động' : '🔴 Tạm dừng'} • 
-              Zoom: {zoom}/19 • 
-              Chế độ: {mapType === 'street' ? 'Đường phố' : 'Vệ tinh'}
+              GPS: {isTracking ? `🟢 ${t(lang,'online')}` : `🔴 ${t(lang,'paused')}`} • 
+              {t(lang,'zoom_label')}: {zoom}/19 • 
+              {t(lang,'mode')}: {mapType === 'street' ? t(lang,'street_map') : t(lang,'satellite_map')}
             </p>
           </div>
           {currentLocation && (
@@ -696,8 +703,8 @@ const DriverMap = () => {
             <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-90 z-10">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">Đang tải Google-like Map...</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Leaflet + OpenStreetMap + Routing</p>
+                <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">{t(lang,'loading_map')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t(lang,'map_stack_hint')}</p>
               </div>
             </div>
           )}
@@ -728,7 +735,7 @@ const DriverMap = () => {
                 <button
                   onClick={toggleMapType}
                   className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title={`Chuyển sang ${mapType === 'street' ? 'vệ tinh' : 'đường phố'}`}
+                  title={mapType === 'street' ? t(lang,'switch_to_satellite') : t(lang,'switch_to_street')}
                 >
                   <Layers className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button>
@@ -739,7 +746,7 @@ const DriverMap = () => {
                 <button
                   onClick={centerOnLocation}
                   className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Về vị trí hiện tại"
+                  title={t(lang,'center_on_current_location')}
                 >
                   <Crosshair className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button>
@@ -751,7 +758,7 @@ const DriverMap = () => {
                   <button
                     onClick={clearRoute}
                     className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-600"
-                    title="Xóa đường đi"
+                    title={t(lang,'clear_route')}
                   >
                     <Target className="h-4 w-4" />
                   </button>
@@ -770,7 +777,7 @@ const DriverMap = () => {
                 >
                   <div className="flex items-center">
                     {isTracking ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-                    {isTracking ? 'Dừng GPS' : 'Bắt đầu GPS'}
+                    {isTracking ? t(lang,'stop_gps') : t(lang,'start_gps')}
                   </div>
                 </button>
 
@@ -778,30 +785,26 @@ const DriverMap = () => {
                   onClick={getCurrentLocation}
                   className="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-semibold shadow-lg transition-all transform hover:scale-105"
                 >
-                  📍 Cập nhật vị trí
+                  📍 {t(lang,'update_location')}
                 </button>
 
-                <button
-                  onClick={() => setAlert({ type: 'warning', message: '🚨 Đã gửi cảnh báo khẩn cấp!' })}
-                  className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold shadow-lg transition-all transform hover:scale-105"
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2 inline" />
-                  SOS
-                </button>
+                
               </div>
             </>
           )}
         </div>
+
+        
 
         {/* Info Sidebar - Separate scroll */}
         <div className="w-80 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-600 flex flex-col map-sidebar">
           <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex-shrink-0">
             <h3 className="text-lg font-bold flex items-center">
               <Navigation className="h-5 w-5 mr-2" />
-              Navigation Panel
+              {t(lang,'navigation_panel')}
             </h3>
             <p className="text-sm opacity-90">
-              {selectedStudent ? `Đang điều hướng đến ${selectedStudent.name}` : 'Chọn học sinh để tìm đường'}
+              {selectedStudent ? `${t(lang,'navigating_to_prefix')} ${selectedStudent.name || selectedStudent.student_name}` : t(lang,'select_student_to_navigate')}
             </p>
           </div>
 
@@ -811,25 +814,25 @@ const DriverMap = () => {
               <div className="p-4 bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700">
                 <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-2 flex items-center">
                   <Route className="h-4 w-4 mr-2" />
-                  Thông tin đường đi
+                  {t(lang,'route_info')}
                 </h4>
                 <div className="space-y-2 text-sm text-blue-700 dark:text-blue-300">
                   <div className="flex justify-between">
-                    <span>Khoảng cách:</span>
+                    <span>{t(lang,'distance')}:</span>
                     <span className="font-bold">{routeInfo.distance} km</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Thời gian:</span>
-                    <span className="font-bold">{routeInfo.time} phút</span>
+                    <span>{t(lang,'time')}:</span>
+                    <span className="font-bold">{routeInfo.time} {t(lang,'minutes')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Đến:</span>
-                    <span className="font-bold">{selectedStudent?.name}</span>
+                    <span>{t(lang,'to_label')}:</span>
+                    <span className="font-bold">{selectedStudent?.name || selectedStudent?.student_name}</span>
                   </div>
                 </div>
                 {routeInfo.instructions && (
                   <div className="mt-3">
-                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Hướng dẫn:</h5>
+                    <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-2">{t(lang,'directions')}:</h5>
                     <div className="space-y-1 text-xs text-blue-600 dark:text-blue-400 max-h-20 overflow-y-auto">
                       {routeInfo.instructions.map((instruction, index) => (
                         <div key={index} className="flex items-start">
@@ -846,17 +849,17 @@ const DriverMap = () => {
             {/* Students List */}
             <div className="p-4">
               <h4 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center">
-                👥 Học sinh trên tuyến ({students.length})
+                👥 {t(lang,'students')} ({students.length})
               </h4>
               {loading ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-sm text-gray-500 mt-2">Đang tải...</p>
+                  <p className="text-sm text-gray-500 mt-2">{t(lang,'loading')}</p>
                 </div>
               ) : students.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Chưa có học sinh nào</p>
+                  <p>{t(lang,'no_students_yet')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -874,8 +877,8 @@ const DriverMap = () => {
                           student.trip_status === 'waiting' || student.trip_status === 'scheduled' ? 'bg-orange-500' : 
                           student.trip_status === 'onboard' ? 'bg-blue-500' : 'bg-green-500'
                         }`}>
-                          {student.trip_status === 'waiting' || student.trip_status === 'scheduled' ? '⏳ Chờ' : 
-                           student.trip_status === 'onboard' ? '🚌 Đang đi' : '✅ Đã trả'}
+                          {student.trip_status === 'waiting' || student.trip_status === 'scheduled' ? `⏳ ${t(lang,'waiting_pickup')}` : 
+                           student.trip_status === 'onboard' ? `🚌 ${t(lang,'on_bus')}` : `✅ ${t(lang,'dropped_off')}`}
                         </div>
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
@@ -886,11 +889,11 @@ const DriverMap = () => {
                         {student.parent_name && (
                           <div className="flex items-center">
                             <Users className="h-3 w-3 mr-1" />
-                            PH: {student.parent_name}
+                            {t(lang,'parent_label')}: {student.parent_name}
                           </div>
                         )}
                         <div className="text-xs text-gray-500">
-                          Thứ tự: #{student.stop_order}
+                          {t(lang,'order')}: #{student.stop_order}
                         </div>
                       </div>
                       
@@ -903,19 +906,19 @@ const DriverMap = () => {
                               className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center"
                             >
                               <Route className="h-3 w-3 mr-1" />
-                              Tìm đường
+                              {t(lang,'navigate')}
                             </button>
                             <button
                               onClick={() => handleUpdateStudentStatus(student, 'onboard')}
                               className="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center"
                             >
-                              🚌 Đón lên xe
+                              🚌 {t(lang,'pick_up')}
                             </button>
                             <button
                               onClick={() => handleUpdateStudentStatus(student, 'absent')}
                               className="w-full bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs font-medium transition-colors flex items-center justify-center"
                             >
-                              ❌ Vắng mặt
+                              ❌ {t(lang,'absent')}
                             </button>
                           </>
                         )}
@@ -925,7 +928,7 @@ const DriverMap = () => {
                             onClick={() => handleUpdateStudentStatus(student, 'dropped')}
                             className="w-full bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center"
                           >
-                            ✅ Trả học sinh
+                            ✅ {t(lang,'drop_off')}
                           </button>
                         )}
                       </div>
@@ -940,25 +943,25 @@ const DriverMap = () => {
               {currentLocation && (
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center">
-                    📍 Vị trí GPS
+                    📍 {t(lang,'gps_location')}
                   </h4>
                   <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <span>Vĩ độ:</span>
+                      <span>{t(lang,'latitude')}:</span>
                       <span className="font-mono font-medium">{currentLocation.lat.toFixed(6)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Kinh độ:</span>
+                      <span>{t(lang,'longitude')}:</span>
                       <span className="font-mono font-medium">{currentLocation.lng.toFixed(6)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Độ chính xác:</span>
+                      <span>{t(lang,'accuracy')}:</span>
                       <span>±{currentLocation.accuracy}m</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Trạng thái:</span>
+                      <span>{t(lang,'status')}:</span>
                       <span className={`font-medium ${isTracking ? 'text-green-600' : 'text-red-600'}`}>
-                        {isTracking ? '🟢 Theo dõi' : '🔴 Dừng'}
+                        {isTracking ? `🟢 ${t(lang,'tracking_label')}` : `🔴 ${t(lang,'stopped')}`}
                       </span>
                     </div>
                   </div>
@@ -969,19 +972,12 @@ const DriverMap = () => {
             {/* Quick Actions */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-600 space-y-3">
               <button
-                onClick={() => setAlert({ type: 'warning', message: '📢 Đã gửi thông báo cho phụ huynh!' })}
+                onClick={() => setAlert({ type: 'warning', message: t(lang,'notification_sent_to_parents') })}
                 className="w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors shadow-lg"
               >
-                📢 Thông báo phụ huynh
+                📢 {t(lang,'notify_parents')}
               </button>
-              
-              <button
-                onClick={() => setAlert({ type: 'warning', message: '🚨 Đã kích hoạt cảnh báo khẩn cấp!' })}
-                className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-lg"
-              >
-                <AlertTriangle className="h-4 w-4 inline mr-2" />
-                Báo cáo khẩn cấp
-              </button>
+
             </div>
           </div>
         </div>

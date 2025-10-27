@@ -182,7 +182,7 @@ export default function Drivers() {
     }
 
     async function handleDelete(row) { 
-        if (!window.confirm(`Bạn có chắc muốn xóa tài xế ${row.full_name}?`)) {
+        if (!window.confirm(t(lang,'confirm_delete_driver'))) {
             return
         }
         try {
@@ -219,7 +219,7 @@ export default function Drivers() {
     ]
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl shadow-lg p-6 text-white">
@@ -229,8 +229,8 @@ export default function Drivers() {
                                 <span className="text-3xl">🚗</span>
                             </div>
                             <div>
-                                <h2 className="text-3xl font-bold">Quản lý tài xế</h2>
-                                <p className="text-green-100 mt-1">Tổng số: {drivers.length} tài xế</p>
+                                <h2 className="text-3xl font-bold">{t(lang,'drivers_page_title')}</h2>
+                                <p className="text-green-100 mt-1">{t(lang,'drivers_total_label')}: {drivers.length}</p>
                             </div>
                         </div>
                         <button 
@@ -238,15 +238,15 @@ export default function Drivers() {
                             onClick={openAddModal}
                             disabled={loading}
                         >
-                            <span>➕</span> Thêm tài xế
+                            <span>➕</span> {t(lang,'add_driver_button')}
                         </button>
                     </div>
                 </div>
 
                 {/* Error Alert */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-red-800">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
                             <span className="text-xl">⚠️</span>
                             <span className="font-medium">{error}</span>
                         </div>
@@ -255,31 +255,31 @@ export default function Drivers() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600 font-medium">Tổng tài xế</p>
-                                <p className="text-2xl font-bold text-gray-800">{drivers.length}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">{t(lang,'drivers_total_label')}</p>
+                                <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{drivers.length}</p>
                             </div>
                             <span className="text-4xl">👨‍✈️</span>
                         </div>
                     </div>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-green-600 font-medium">Đang hoạt động</p>
-                                <p className="text-2xl font-bold text-green-700">
+                                <p className="text-sm text-green-600 dark:text-green-300 font-medium">{t(lang,'active_drivers')}</p>
+                                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
                                     {drivers.filter(d => d.active).length}
                                 </p>
                             </div>
                             <span className="text-4xl">✅</span>
                         </div>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-blue-600 font-medium">Đã có xe</p>
-                                <p className="text-2xl font-bold text-blue-700">
+                                <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">{t(lang,'drivers_with_bus')}</p>
+                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                                     {drivers.filter(d => d.bus_id).length}
                                 </p>
                             </div>
@@ -289,72 +289,72 @@ export default function Drivers() {
                 </div>
 
                 {/* Drivers Table */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {loading ? (
                         <div className="p-12 text-center">
                             <div className="inline-block animate-spin text-6xl mb-4">⏳</div>
-                            <p className="text-gray-500">Đang tải danh sách tài xế...</p>
+                            <p className="text-gray-500">{t(lang,'loading_list')}</p>
                         </div>
                     ) : drivers.length === 0 ? (
                         <div className="p-12 text-center">
                             <span className="text-6xl mb-4 block">🚗</span>
-                            <p className="text-gray-500 text-lg mb-2">Chưa có tài xế nào trong hệ thống</p>
-                            <p className="text-gray-400 text-sm">Nhấn nút "Thêm tài xế" để thêm tài xế đầu tiên</p>
+                            <p className="text-gray-500 text-lg mb-2">{t(lang,'no_drivers_yet')}</p>
+                            <p className="text-gray-400 text-sm">{t(lang,'add_driver_button')}</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-200">
+                                <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                                     <tr>
-                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Tài xế</th>
-                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Liên hệ</th>
-                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Bằng lái</th>
-                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Xe được giao</th>
-                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Trạng thái</th>
-                                        <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700">Thao tác</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t(lang,'driver_label')}</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t(lang,'contact')}</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Bằng lái</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t(lang,'assigned_bus')}</th>
+                                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t(lang,'driver_status')}</th>
+                                        <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t(lang,'actions')}</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200">
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                     {drivers.map((driver) => (
-                                        <tr key={driver.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={driver.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-teal-600 rounded-full flex items-center justify-center text-white font-bold">
                                                         {driver.full_name?.charAt(0)?.toUpperCase() || 'D'}
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium text-gray-800">{driver.full_name}</div>
-                                                        <div className="text-sm text-gray-500">{driver.email}</div>
+                                                        <div className="font-medium text-gray-800 dark:text-gray-100">{driver.full_name}</div>
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">{driver.email}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-600">
+                                                <div className="text-sm text-gray-600 dark:text-gray-300">
                                                     📞 {driver.phone || '—'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-mono text-gray-700">
+                                                <div className="text-sm font-mono text-gray-700 dark:text-gray-200">
                                                     {driver.license_number || '—'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 {driver.bus_plate ? (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs font-medium">
                                                         <span>🚌</span> {driver.bus_plate}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-400 text-sm">Chưa có xe</span>
+                                                    <span className="text-gray-400 dark:text-gray-500 text-sm">{t(lang,'no_bus')}</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {driver.active ? (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 border border-green-200 rounded-full text-xs font-medium">
-                                                        <span>✅</span> Hoạt động
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-full text-xs font-medium">
+                                                        <span>✅</span> {t(lang,'active')}
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 border border-gray-200 rounded-full text-xs font-medium">
-                                                        <span>❌</span> Không hoạt động
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-full text-xs font-medium">
+                                                        <span>❌</span> {t(lang,'inactive')}
                                                     </span>
                                                 )}
                                             </td>
@@ -362,15 +362,15 @@ export default function Drivers() {
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => openEditModal(driver)}
-                                                        className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                                                        className="px-3 py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors text-sm font-medium"
                                                     >
-                                                        ✏️ Sửa
+                                                        ✏️ {t(lang,'edit')}
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(driver)}
-                                                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                                                        className="px-3 py-1.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors text-sm font-medium"
                                                     >
-                                                        🗑️ Xóa
+                                                        🗑️ {t(lang,'delete')}
                                                     </button>
                                                 </div>
                                             </td>
@@ -383,79 +383,79 @@ export default function Drivers() {
                 </div>
             </div>
 
-            <Modal open={modalOpen} title={editingDriver ? 'Sửa tài xế' : 'Thêm tài xế'} onClose={closeModal}>
+            <Modal open={modalOpen} title={editingDriver ? `${t(lang,'edit')} ${t(lang,'driver_label')}` : t(lang,'add_driver_button')} onClose={closeModal}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Họ tên *</label>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">{t(lang,'full_name')} *</label>
                         <input
                             type="text"
                             value={formData.full_name}
                             onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                             placeholder="VD: Nguyễn Văn A"
                         />
                     </div>
                     
                     <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
                             Email {!editingDriver && '*'}
                         </label>
                         <input
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                             placeholder="VD: driver@example.com"
                             disabled={editingDriver} // Disable email edit for existing drivers
                         />
                         {editingDriver && (
-                            <p className="text-xs text-gray-500 mt-1">Email không thể thay đổi sau khi tạo</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Email không thể thay đổi sau khi tạo</p>
                         )}
                     </div>
                     
                     {!editingDriver && (
                         <div>
-                            <label className="block text-sm font-medium mb-1">Mật khẩu *</label>
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-200">{t(lang,'password')} *</label>
                             <input
                                 type="password"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="w-full px-3 py-2 border rounded"
+                                className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                 placeholder="Tối thiểu 6 ký tự"
                             />
                         </div>
                     )}
                     
                     <div>
-                        <label className="block text-sm font-medium mb-1">Số điện thoại *</label>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">{t(lang,'phone')} *</label>
                         <input
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                             placeholder="VD: 0908123456"
                         />
                     </div>
                     
                     <div>
-                        <label className="block text-sm font-medium mb-1">Số bằng lái</label>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">Số bằng lái</label>
                         <input
                             type="text"
                             value={formData.license_number}
                             onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                             placeholder="VD: B123456789"
                         />
                     </div>
                     
                     <div>
-                        <label className="block text-sm font-medium mb-1">Xe được giao</label>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">{t(lang,'assigned_bus')}</label>
                         <select
                             value={formData.bus_id}
                             onChange={(e) => setFormData({ ...formData, bus_id: e.target.value })}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full px-3 py-2 border rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                         >
-                            <option value="">-- Chưa giao xe --</option>
+                            <option value="">-- {t(lang,'no_bus')} --</option>
                             {buses
                                 .filter(bus => !bus.driver_id || (editingDriver && bus.driver_id === editingDriver.id))
                                 .map(bus => (
@@ -466,24 +466,24 @@ export default function Drivers() {
                                 ))
                             }
                         </select>
-                        <p className="text-xs text-gray-500 mt-1">Chỉ hiển thị xe chưa được giao hoặc xe hiện tại của tài xế</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t(lang,'select_bus')}</p>
                     </div>
                     
                     <div className="flex gap-2 justify-end pt-4">
                         <button
                             type="button"
                             onClick={closeModal}
-                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                            className="px-4 py-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
                             disabled={submitting}
                         >
-                            Hủy
+                            {t(lang,'cancel')}
                         </button>
                         <button
                             type="submit"
                             className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
                             disabled={submitting}
                         >
-                            {submitting ? 'Đang xử lý...' : 'Lưu'}
+                            {submitting ? t(lang,'loading') : t(lang,'save')}
                         </button>
                     </div>
                 </form>

@@ -1,5 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../db/connection.js';
 
 const router = express.Router();
@@ -51,13 +52,14 @@ router.get('/test', async (req, res) => {
 // Get active trips (for admin/parent tracking)
 router.get('/active', async (req, res) => {
     try {
-        const [trips] = await pool.query(`
+        // Return active schedules/trips currently running for public tracking consumers
+    // Note: database stores running status as 'active'
+    const [trips] = await pool.query(`
             SELECT 
-                t.id,
-                t.status,
-                t.scheduled_date,
-                t.start_time,
-                t.actual_start_time,
+                s.id as schedule_id,
+                s.status,
+                s.scheduled_date,
+                s.start_time,
                 b.id as bus_id,
                 b.plate as bus_plate,
                 b.current_lat,
@@ -70,18 +72,159 @@ router.get('/active', async (req, res) => {
                 d.id as driver_id,
                 u.full_name as driver_name,
                 u.phone as driver_phone
-            FROM trips t
-            JOIN buses b ON t.bus_id = b.id
-            JOIN routes r ON t.route_id = r.id
+            FROM schedules s
+            JOIN buses b ON s.bus_id = b.id
+            JOIN routes r ON s.route_id = r.id
             LEFT JOIN drivers d ON b.driver_id = d.id
             LEFT JOIN users u ON d.user_id = u.id
-            WHERE t.status = 'in-progress'
-            ORDER BY t.scheduled_date DESC, t.start_time DESC
+            WHERE s.status = 'active'
+            ORDER BY s.scheduled_date DESC, s.start_time DESC
         `);
         
-        res.json({ count: trips.length, trips });
+        // Backward compatibility: also return id at top-level for existing clients
+    const normalized = trips.map(row => ({ id: row.schedule_id, ...row }));
+    res.set('Cache-Control', 'no-store');
+    res.json({ count: trips.length, trips: normalized });
     } catch (error) {
         console.error('Error getting active trips:', error);
+        res.status(500).json({ error: 'internal_error', message: error.message });
+    }
+});
+
+// Admin: list active drivers with their current bus and route
+router.get('/admin/active-drivers', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'admin_only' });
+        }
+
+        const [rows] = await pool.query(`
+            SELECT 
+                s.id as schedule_id,
+                s.status,
+                s.scheduled_date,
+                s.start_time,
+                b.id as bus_id,
+                b.plate as bus_plate,
+                b.current_lat,
+                b.current_lng,
+                b.speed,
+                b.heading,
+                b.students_onboard,
+                r.id as route_id,
+                r.name as route_name,
+                d.id as driver_id,
+                u.full_name as driver_name,
+                u.phone as driver_phone
+            FROM schedules s
+            JOIN buses b ON s.bus_id = b.id
+            JOIN routes r ON s.route_id = r.id
+            LEFT JOIN drivers d ON b.driver_id = d.id
+            LEFT JOIN users u ON d.user_id = u.id
+            WHERE s.status = 'active'
+            ORDER BY s.scheduled_date DESC, s.start_time DESC
+        `);
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ success: true, count: rows.length, drivers: rows });
+    } catch (error) {
+        console.error('Error getting active drivers:', error);
+        res.status(500).json({ error: 'internal_error', message: error.message });
+    }
+});
+
+// Admin: get students of a schedule regardless of driver, for monitoring
+router.get('/admin/schedule/:id/students', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'admin_only' });
+        }
+
+        const { id } = req.params; // schedule_id
+        const connection = await pool.getConnection();
+        try {
+            // Fetch schedule and ensure it exists
+            const [scheduleRows] = await connection.execute(`
+                SELECT s.id, s.route_id, s.bus_id, s.status, r.name as route_name, b.plate as bus_plate
+                FROM schedules s
+                JOIN routes r ON s.route_id = r.id
+                LEFT JOIN buses b ON s.bus_id = b.id
+                WHERE s.id = ?
+            `, [id]);
+
+            if (scheduleRows.length === 0) {
+                return res.status(404).json({ error: 'schedule_not_found' });
+            }
+
+            const schedule = scheduleRows[0];
+
+            // Students with trip status for this schedule
+            const [studentRows] = await connection.execute(`
+                SELECT 
+                    s.id as student_id,
+                    s.full_name as student_name,
+                    s.grade,
+                    s.class,
+                    s.address as student_address,
+                    s.home_lat as student_home_lat,
+                    s.home_lng as student_home_lng,
+                    rs.id as stop_id,
+                    rs.name as stop_name,
+                    rs.lat as stop_lat,
+                    rs.lng as stop_lng,
+                    rs.stop_order,
+                    rs.is_pickup,
+                    u.phone as parent_phone,
+                    u.full_name as parent_name,
+                    u.email as parent_email,
+                    t.id as trip_id,
+                    t.status as trip_status,
+                    t.picked_at,
+                    t.dropped_at,
+                    t.notes
+                FROM students s
+                JOIN users u ON s.parent_user_id = u.id
+                LEFT JOIN route_stops rs ON s.assigned_stop_id = rs.id
+                LEFT JOIN trips t ON t.student_id = s.id AND t.schedule_id = ?
+                WHERE s.assigned_bus_id = ? AND s.assigned_route_id = ?
+                ORDER BY rs.stop_order ASC, s.full_name ASC
+            `, [id, schedule.bus_id, schedule.route_id]);
+
+            const students = studentRows.map(row => ({
+                student_id: row.student_id,
+                student_name: row.student_name,
+                grade: row.grade,
+                class: row.class,
+                student_address: row.student_address || null,
+                student_home_lat: row.student_home_lat != null ? parseFloat(row.student_home_lat) : null,
+                student_home_lng: row.student_home_lng != null ? parseFloat(row.student_home_lng) : null,
+                stop_id: row.stop_id,
+                stop_name: row.stop_name || null,
+                stop_lat: row.stop_lat != null ? parseFloat(row.stop_lat) : null,
+                stop_lng: row.stop_lng != null ? parseFloat(row.stop_lng) : null,
+                stop_order: row.stop_order || 999,
+                is_pickup: !!row.is_pickup,
+                parent_name: row.parent_name,
+                parent_phone: row.parent_phone,
+                parent_email: row.parent_email,
+                trip_id: row.trip_id,
+                trip_status: row.trip_status || 'waiting',
+                picked_at: row.picked_at,
+                dropped_at: row.dropped_at,
+                notes: row.notes,
+                // convenient fields for map display
+                display_lat: row.stop_lat != null ? parseFloat(row.stop_lat) : (row.student_home_lat != null ? parseFloat(row.student_home_lat) : null),
+                display_lng: row.stop_lng != null ? parseFloat(row.stop_lng) : (row.student_home_lng != null ? parseFloat(row.student_home_lng) : null),
+                location_source: row.stop_lat != null ? 'stop' : (row.student_home_lat != null ? 'home' : 'none')
+            }));
+
+            res.set('Cache-Control', 'no-store');
+            res.json({ success: true, schedule, students, total_count: students.length });
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Error fetching admin schedule students:', error);
         res.status(500).json({ error: 'internal_error', message: error.message });
     }
 });
@@ -568,77 +711,7 @@ router.get('/route/:routeId/stops', authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/trips/emergency - Send emergency alert
-router.post('/emergency', authMiddleware, async (req, res) => {
-    try {
-        if (req.user.role !== 'driver') {
-            return res.status(403).json({ error: 'access_denied' });
-        }
-
-    const { alert_type = 'emergency', message, severity = 'medium' } = req.body;
-
-        const connection = await pool.getConnection();
-        
-        try {
-            // Get driver info and latest location
-            const [driverRows] = await connection.execute(`
-                SELECT d.id, d.full_name, u.id as user_id, b.id as bus_id, b.plate, b.current_lat, b.current_lng
-                FROM drivers d
-                JOIN users u ON d.user_id = u.id
-                LEFT JOIN buses b ON d.id = b.driver_id
-                WHERE d.user_id = ?
-            `, [req.user.id]);
-
-            if (driverRows.length === 0) {
-                return res.status(404).json({ error: 'driver_not_found' });
-            }
-
-            const driver = driverRows[0];
-
-            // Create emergency alert (align with DB schema)
-            const alertId = `alert-${Date.now()}`;
-            await connection.execute(`
-                INSERT INTO emergency_alerts (id, driver_user_id, type, message, severity, location_lat, location_lng, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-            `, [
-                alertId,
-                driver.user_id,
-                alert_type,
-                message || 'Driver reported an emergency',
-                severity,
-                driver.current_lat || null,
-                driver.current_lng || null
-            ]);
-
-            res.json({ 
-                success: true,
-                message: 'Emergency alert sent successfully',
-                alert: {
-                    id: alertId,
-                    type: alert_type,
-                    severity,
-                    driver_name: driver.full_name,
-                    bus_plate: driver.plate,
-                    location: {
-                        lat: driver.current_lat || null,
-                        lng: driver.current_lng || null
-                    }
-                },
-                timestamp: new Date().toISOString()
-            });
-
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
-        console.error('Database error sending emergency alert:', error);
-        res.status(500).json({ 
-            error: 'database_error', 
-            message: 'Failed to send emergency alert',
-            details: error.message 
-        });
-    }
-});
+// Note: Emergency alert APIs have been removed.
 
 // POST /api/trips/schedule/:scheduleId/start - Start a trip
 router.post('/schedule/:scheduleId/start', authMiddleware, async (req, res) => {
@@ -669,10 +742,10 @@ router.post('/schedule/:scheduleId/start', authMiddleware, async (req, res) => {
 
             const schedule = scheduleRows[0];
 
-            // Update schedule status to 'in-progress'
+            // Update schedule status to 'active' (matches DB ENUM)
             await connection.execute(`
                 UPDATE schedules 
-                SET status = 'in-progress', updated_at = NOW()
+                SET status = 'active', updated_at = NOW()
                 WHERE id = ?
             `, [scheduleId]);
 

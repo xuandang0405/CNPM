@@ -77,7 +77,7 @@ export default function Buses() {
   }
 
   async function handleDelete(row) {
-    if (!window.confirm('Bạn có chắc muốn xóa xe này?')) return
+    if (!window.confirm(t(lang,'confirm_delete_bus'))) return
     try {
       await deleteBus(row.id)
       load()
@@ -94,7 +94,7 @@ export default function Buses() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl shadow-lg p-6 text-white">
@@ -104,8 +104,8 @@ export default function Buses() {
                 <span className="text-3xl">🚌</span>
               </div>
               <div>
-                <h2 className="text-3xl font-bold">Quản lý xe buýt</h2>
-                <p className="text-blue-100 mt-1">Tổng số: {buses.length} xe</p>
+                <h2 className="text-3xl font-bold">{t(lang,'buses_page_title')}</h2>
+                <p className="text-blue-100 mt-1">{t(lang,'buses_total_label')}: {buses.length}</p>
               </div>
             </div>
             <button 
@@ -113,15 +113,15 @@ export default function Buses() {
               onClick={openAddModal}
               disabled={loading}
             >
-              <span>➕</span> Thêm xe buýt
+              <span>➕</span> {t(lang,'add_bus_button')}
             </button>
           </div>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-red-800">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
               <span className="text-xl">⚠️</span>
               <span className="font-medium">{error}</span>
             </div>
@@ -129,61 +129,61 @@ export default function Buses() {
         )}
 
         {/* Buses Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block animate-spin text-6xl mb-4">⏳</div>
-              <p className="text-gray-500">Đang tải danh sách xe buýt...</p>
+              <p className="text-gray-500 dark:text-gray-400">{t(lang,'loading_list')}</p>
             </div>
           ) : buses.length === 0 ? (
             <div className="p-12 text-center">
               <span className="text-6xl mb-4 block">🚌</span>
-              <p className="text-gray-500 text-lg mb-2">Chưa có xe buýt nào trong hệ thống</p>
-              <p className="text-gray-400 text-sm">Nhấn nút "Thêm xe buýt" để thêm xe đầu tiên</p>
+              <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">{t(lang,'no_buses')}</p>
+              <p className="text-gray-400 text-sm">{t(lang,'add_bus_button')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">ID</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Biển số xe</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Sức chứa</th>
-                    <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700">Thao tác</th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">ID</th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{t(lang,'license_plate')}</th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{t(lang,'capacity')}</th>
+                    <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{t(lang,'actions')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {buses.map((bus) => (
-                    <tr key={bus.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={bus.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="text-gray-600 font-mono text-sm">#{bus.id}</span>
+                        <span className="text-gray-600 dark:text-gray-300 font-mono text-sm">#{bus.id}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-full flex items-center justify-center text-white text-xl">
                             🚌
                           </div>
-                          <span className="font-medium text-gray-800 font-mono">{bus.plate}</span>
+                          <span className="font-medium text-gray-800 dark:text-gray-100 font-mono">{bus.plate}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                          <span>👥</span> {bus.capacity} chỗ
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-sm font-medium">
+                          <span>👥</span> {bus.capacity} {t(lang,'seats')}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openEditModal(bus)}
-                            className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                            className="px-3 py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
                           >
-                            ✏️ Sửa
+                            ✏️ {t(lang,'edit')}
                           </button>
                           <button
                             onClick={() => handleDelete(bus)}
-                            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                            className="px-3 py-1.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-medium"
                           >
-                            🗑️ Xóa
+                            🗑️ {t(lang,'delete')}
                           </button>
                         </div>
                       </td>
@@ -196,43 +196,43 @@ export default function Buses() {
         </div>
       </div>
 
-      <Modal open={modalOpen} title={editingBus ? 'Sửa xe buýt' : 'Thêm xe buýt'} onClose={closeModal}>
+      <Modal open={modalOpen} title={editingBus ? `${t(lang,'edit')} ${t(lang,'bus')}` : t(lang,'add_bus_button')} onClose={closeModal}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Biển số xe *</label>
+            <label className="block text-sm font-medium mb-1">{t(lang,'license_plate')} *</label>
             <input
               type="text"
               value={formData.plate}
               onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               placeholder="VD: 30A-12345"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Sức chứa (ghế) *</label>
+            <label className="block text-sm font-medium mb-1">{t(lang,'capacity')} ({t(lang,'seats')}) *</label>
             <input
               type="number"
               min="1"
               value={formData.capacity}
               onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
           </div>
           <div className="flex gap-2 justify-end pt-4">
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
+              className="px-4 py-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
               disabled={submitting}
             >
-              Hủy
+              {t(lang,'cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
               disabled={submitting}
             >
-              {submitting ? 'Đang xử lý...' : 'Lưu'}
+              {submitting ? t(lang,'loading') : t(lang,'save')}
             </button>
           </div>
         </form>

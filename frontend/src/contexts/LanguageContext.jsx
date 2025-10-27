@@ -1,31 +1,25 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
+import { useUserStore } from '../store/useUserStore';
+import { availableLangs } from '../i18n';
 
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => {
-    // Get from localStorage or default to Vietnamese
-    const saved = localStorage.getItem('language');
-    return saved || 'vi';
-  });
-
-  useEffect(() => {
-    // Save to localStorage when language changes
-    localStorage.setItem('language', language);
-  }, [language]);
+  // Use a single source of truth for language from the global store
+  const { lang, setLang } = useUserStore(state => ({ lang: state.lang, setLang: state.setLang }));
+  const langs = availableLangs();
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'vi' ? 'en' : 'vi');
+    const idx = Math.max(0, langs.indexOf(lang));
+    const next = langs[(idx + 1) % langs.length];
+    setLang(next);
   };
-
-  const changeLanguage = (lang) => {
-    if (['vi', 'en'].includes(lang)) {
-      setLanguage(lang);
-    }
+  const changeLanguage = (next) => {
+    if (langs.includes(next)) setLang(next);
   };
 
   return (
-    <LanguageContext.Provider value={{ language, toggleLanguage, changeLanguage }}>
+    <LanguageContext.Provider value={{ language: lang, languages: langs, toggleLanguage, changeLanguage }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -6,7 +6,6 @@ import {
   MapPin, 
   CheckCircle, 
   XCircle, 
-  AlertTriangle,
   Bus,
   Route,
   Phone,
@@ -18,20 +17,27 @@ import {
 import { Button } from '../../components/common/Button';
 import { AlertBanner } from '../../components/common/AlertBanner';
 import { Modal } from '../../components/common/Modal';
+import { useUserStore } from '../../store/useUserStore';
+import { t } from '../../i18n';
+ 
 import { 
   getScheduleStudents, 
   updateTripStatus, 
-  sendEmergencyAlert,
-  getDriverSchedule
+  getDriverSchedule,
+  startTrip,
+  completeTrip
 } from '../../api/trips';
 
 export default function DriverTrip() {
   const { id } = useParams(); // schedule_id
   const navigate = useNavigate();
+  const { lang } = useUserStore();
   const [trip, setTrip] = useState(null);
   const [students, setStudents] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [scheduleInfo, setScheduleInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  
   const [alert, setAlert] = useState(null);
   const [showQuickMessage, setShowQuickMessage] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -61,14 +67,14 @@ export default function DriverTrip() {
           
           setAlert({ 
             type: 'info', 
-            message: 'Chưa có lịch trình nào được phân công.' 
+            message: t(lang, 'no_schedules_assigned_short') 
           });
         }
       } catch (error) {
         console.error('Error loading schedules:', error);
         setAlert({ 
           type: 'error', 
-          message: 'Không thể tải danh sách lịch trình' 
+          message: t(lang, 'load_schedules_failed') 
         });
       } finally {
         setLoading(false);
@@ -95,7 +101,7 @@ export default function DriverTrip() {
           if (response.students && response.students.length === 0) {
             setAlert({ 
               type: 'warning', 
-              message: 'Chuyến đi này chưa có học sinh nào được phân công.' 
+              message: t(lang, 'no_students_assigned_trip') 
             });
           }
           
@@ -109,17 +115,36 @@ export default function DriverTrip() {
             absent: response.students?.filter(s => s.trip_status === 'absent').length || 0
           };
           setTrip(tripData);
+          // Also load schedule info for header/status controls
+          try {
+            const schedRes = await getDriverSchedule();
+            if (schedRes?.schedules) {
+              const current = schedRes.schedules.find(s => `${s.schedule_id}` === `${id}`);
+              if (current) {
+                setScheduleInfo({
+                  id: current.schedule_id,
+                  status: current.status,
+                  route_name: current.route_name,
+                  start_time: current.start_time,
+                  end_time: current.end_time,
+                  license_plate: current.license_plate
+                });
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to load driver schedules for header info', e);
+          }
         } else {
           setAlert({ 
             type: 'error', 
-            message: response.message || 'Không thể tải dữ liệu chuyến đi' 
+            message: response.message || t(lang, 'load_trip_failed') 
           });
         }
       } catch (error) {
         console.error('Error loading trip data:', error);
         setAlert({ 
           type: 'error', 
-          message: error.response?.data?.message || 'Không thể tải dữ liệu chuyến đi! Vui lòng thử lại.' 
+          message: error.response?.data?.message || t(lang, 'load_trip_failed_retry') 
         });
       } finally {
         setLoading(false);
@@ -130,6 +155,36 @@ export default function DriverTrip() {
       loadTripData();
     }
   }, [id]);
+
+  // Start and complete trip handlers
+  const handleStartTrip = async () => {
+    if (!scheduleInfo?.id) return;
+    try {
+      const res = await startTrip(scheduleInfo.id);
+      if (res?.success) {
+  setScheduleInfo(prev => (prev ? { ...prev, status: 'in-progress' } : prev));
+  setAlert({ type: 'success', message: t(lang, 'start_trip_success') });
+      }
+    } catch (error) {
+      console.error('Error starting trip:', error);
+  setAlert({ type: 'error', message: error.response?.data?.message || t(lang, 'start_trip_failed') });
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    if (!scheduleInfo?.id) return;
+  if (!confirm(t(lang, 'confirm_complete_trip'))) return;
+    try {
+      const res = await completeTrip(scheduleInfo.id);
+      if (res?.success) {
+  setScheduleInfo(prev => (prev ? { ...prev, status: 'completed' } : prev));
+  setAlert({ type: 'success', message: t(lang, 'complete_trip_success') });
+      }
+    } catch (error) {
+      console.error('Error completing trip:', error);
+  setAlert({ type: 'error', message: error.response?.data?.message || t(lang, 'complete_trip_failed') });
+    }
+  };
 
   // Update student trip status with real API
   const updateStudentStatus = async (tripId, newStatus, notes = null) => {
@@ -164,47 +219,26 @@ export default function DriverTrip() {
         
         setAlert({ 
           type: 'success', 
-          message: response.message || `Đã cập nhật trạng thái thành "${getStatusText(newStatus)}"` 
+          message: response.message || `${t(lang, 'updated_status_to')} "${getStatusText(newStatus)}"` 
         });
       }
     } catch (error) {
       console.error('Error updating student status:', error);
       setAlert({ 
         type: 'error', 
-        message: error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!' 
+        message: error.response?.data?.message || t(lang, 'update_status_failed') 
       });
     }
   };
 
   // Call parent
   const callParent = (phoneNumber) => {
-    if (confirm(`Gọi cho phụ huynh: ${phoneNumber}?`)) {
+    if (confirm(`${t(lang, 'call_parent_prefix')}: ${phoneNumber}?`)) {
       window.location.href = `tel:${phoneNumber}`;
     }
   };
 
-  // Send emergency alert with real API
-  const handleEmergencyAlert = async () => {
-    const alertMessage = prompt('Nhập tin nhắn cảnh báo khẩn cấp:');
-    if (!alertMessage) return;
-    
-    try {
-      const response = await sendEmergencyAlert('emergency', alertMessage);
-      
-      if (response.success) {
-        setAlert({ 
-          type: 'success', 
-          message: response.message || 'Cảnh báo khẩn cấp đã được gửi!' 
-        });
-      }
-    } catch (error) {
-      console.error('Error sending emergency alert:', error);
-      setAlert({ 
-        type: 'error', 
-        message: error.response?.data?.message || 'Không thể gửi cảnh báo khẩn cấp!' 
-      });
-    }
-  };
+  
 
   // Get status text helper
   // Send message to parent (placeholder - would need SMS/notification API)
@@ -215,13 +249,13 @@ export default function DriverTrip() {
       // For now just show success - would need SMS API integration
       setAlert({ 
         type: 'success', 
-        message: `Đã gửi tin nhắn đến phụ huynh của ${selectedStudent.student?.name || selectedStudent.student_name}` 
+        message: `${t(lang, 'sent_message_to_parent_of')} ${selectedStudent.student?.name || selectedStudent.student_name}` 
       });
       setShowQuickMessage(false);
       setMessage('');
       setSelectedStudent(null);
     } catch (error) {
-      setAlert({ type: 'error', message: 'Có lỗi xảy ra khi gửi tin nhắn!' });
+  setAlert({ type: 'error', message: t(lang, 'send_message_failed') });
     }
   };
 
@@ -247,11 +281,11 @@ export default function DriverTrip() {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'waiting': return 'Chờ đón';
-      case 'onboard': return 'Trên xe';
-      case 'dropped': return 'Đã trả';
-      case 'absent': return 'Vắng mặt';
-      default: return 'Không xác định';
+      case 'waiting': return t(lang, 'waiting_pickup');
+      case 'onboard': return t(lang, 'on_bus');
+      case 'dropped': return t(lang, 'dropped_off');
+      case 'absent': return t(lang, 'absent');
+      default: return t(lang, 'unknown');
     }
   };
 
@@ -273,20 +307,20 @@ export default function DriverTrip() {
               <Bus className="h-8 w-8 text-blue-600 mr-3" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {trip?.route_name}
+                  {scheduleInfo?.route_name || trip?.route_name || t(lang, 'trip')}
                 </h1>
                 <div className="flex items-center mt-1 space-x-4 text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
-                    {trip?.start_time} - {trip?.end_time}
+                    {(scheduleInfo?.start_time || trip?.start_time) ?? '--:--'} - {(scheduleInfo?.end_time || trip?.end_time) ?? '--:--'}
                   </div>
                   <div className="flex items-center">
                     <Bus className="w-4 h-4 mr-1" />
-                    {trip?.license_plate}
+                    {scheduleInfo?.license_plate || trip?.license_plate || t(lang, 'no_bus')}
                   </div>
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1" />
-                    {new Date().toLocaleDateString('vi-VN')}
+                    {new Date().toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US')}
                   </div>
                 </div>
               </div>
@@ -294,21 +328,27 @@ export default function DriverTrip() {
 
             <div className="flex items-center space-x-3">
               <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                trip?.status === 'active' 
+                scheduleInfo?.status === 'in-progress'
                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                  : scheduleInfo?.status === 'completed'
+                    ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
               }`}>
-                {trip?.status === 'active' ? 'Đang hoạt động' : 'Đã lên lịch'}
+                {scheduleInfo?.status === 'in-progress' ? t(lang, 'in_progress') : scheduleInfo?.status === 'completed' ? t(lang, 'completed') : t(lang, 'scheduled')}
               </div>
+
+              {scheduleInfo?.status !== 'in-progress' && scheduleInfo?.status !== 'completed' && (
+                <Button onClick={handleStartTrip} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+                  {t(lang, 'start_trip')}
+                </Button>
+              )}
+              {scheduleInfo?.status === 'in-progress' && (
+                <Button onClick={handleCompleteTrip} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
+                  {t(lang, 'complete_trip')}
+                </Button>
+              )}
+
               
-              <Button
-                onClick={handleEmergencyAlert}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                size="sm"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Báo khẩn cấp
-              </Button>
             </div>
           </div>
         </div>
@@ -331,7 +371,7 @@ export default function DriverTrip() {
               <Users className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Tổng học sinh
+                  {t(lang, 'total_students')}
                 </h3>
                 <p className="text-2xl font-bold text-blue-600">
                   {trip?.total_students}
@@ -345,7 +385,7 @@ export default function DriverTrip() {
               <CheckCircle className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Đã hoàn thành
+                  {t(lang, 'completed')}
                 </h3>
                 <p className="text-2xl font-bold text-green-600">
                   {students.filter(s => s.trip_status === 'dropped').length}
@@ -359,7 +399,7 @@ export default function DriverTrip() {
               <Clock className="h-8 w-8 text-yellow-600" />
               <div className="ml-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Còn lại
+                  {t(lang, 'remaining')}
                 </h3>
                 <p className="text-2xl font-bold text-yellow-600">
                   {students.filter(s => ['waiting', 'onboard'].includes(s.trip_status)).length}
@@ -374,7 +414,7 @@ export default function DriverTrip() {
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
               <Route className="w-5 h-5 mr-2 text-blue-600" />
-              Danh sách học sinh theo lộ trình
+              {t(lang, 'student_list_by_route')}
             </h2>
           </div>
 
@@ -414,12 +454,12 @@ export default function DriverTrip() {
                     <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
-                        Dự kiến: {student.pickup_time}
+                        {t(lang, 'planned_time')} {student.pickup_time}
                       </div>
                       {student.actual_time && (
                         <div className="flex items-center">
                           <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                          Thực tế: {student.actual_time}
+                          {t(lang, 'actual_time')} {student.actual_time}
                         </div>
                       )}
                     </div>
@@ -431,7 +471,7 @@ export default function DriverTrip() {
                         onClick={() => callParent(student.parent_phone)}
                       >
                         <Phone className="w-3 h-3 mr-1" />
-                        Gọi
+                        {t(lang, 'call')}
                       </Button>
                       
                       <Button
@@ -443,7 +483,7 @@ export default function DriverTrip() {
                         }}
                       >
                         <MessageSquare className="w-3 h-3 mr-1" />
-                        Nhắn
+                        {t(lang, 'message')}
                       </Button>
 
                       {student.trip_status === 'waiting' && (
@@ -453,14 +493,14 @@ export default function DriverTrip() {
                             onClick={() => updateStudentStatus(student.trip_id, 'onboard')}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
-                            Đón lên
+                            {t(lang, 'pick_up')}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => updateStudentStatus(student.trip_id, 'absent')}
                           >
-                            Vắng mặt
+                            {t(lang, 'absent')}
                           </Button>
                         </div>
                       )}
@@ -471,7 +511,7 @@ export default function DriverTrip() {
                           onClick={() => updateStudentStatus(student.trip_id, 'dropped')}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          Trả học sinh
+                          {t(lang, 'drop_off')}
                         </Button>
                       )}
                     </div>
@@ -491,7 +531,7 @@ export default function DriverTrip() {
           setSelectedStudent(null);
           setMessage('');
         }}
-        title="Gửi tin nhắn nhanh"
+  title={t(lang, 'quick_message_title')}
       >
         <div className="p-6">
           {selectedStudent && (
@@ -503,7 +543,7 @@ export default function DriverTrip() {
                     {selectedStudent.student_name}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Phụ huynh: {selectedStudent.parent_phone}
+                    {t(lang, 'parent_label')}: {selectedStudent.parent_phone}
                   </p>
                 </div>
               </div>
@@ -512,12 +552,12 @@ export default function DriverTrip() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Tin nhắn
+              {t(lang, 'message')}
             </label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập tin nhắn cho phụ huynh..."
+              placeholder={t(lang, 'enter_message_for_parent')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               rows={4}
             />
@@ -530,7 +570,7 @@ export default function DriverTrip() {
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
-              Gửi tin nhắn
+              {t(lang, 'send_message')}
             </Button>
             <Button
               onClick={() => {
@@ -541,11 +581,12 @@ export default function DriverTrip() {
               variant="outline"
               className="flex-1"
             >
-              Hủy
+              {t(lang, 'cancel')}
             </Button>
           </div>
         </div>
       </Modal>
+        
     </div>
   );
 }

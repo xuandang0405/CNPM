@@ -2,7 +2,10 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Login from './pages/Login'
-import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import ChangePassword from './pages/ChangePassword'
+import PublicChangePassword from './pages/PublicChangePassword'
 import AdminLayout from './components/layouts/AdminLayout'
 import DriverLayout from './components/layouts/DriverLayout'
 import ParentLayout from './components/layouts/ParentLayout'
@@ -14,6 +17,7 @@ import DriverMap from './pages/driver/Map'
 import ParentDashboard from './pages/parent/Dashboard'
 import ParentTracking from './pages/parent/Tracking'
 import ParentNotifications from './pages/parent/Notifications'
+import ParentLogin from './pages/parent/Login'
 import { useAuth } from './hooks/useAuth'
 
 function PrivateRoute({ children, role }) {
@@ -27,8 +31,13 @@ export default function App() {
   return (
     <ThemeProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+  <Route path="/login" element={<Login />} />
+  <Route path="/parent/login" element={<ParentLogin />} />
+        {/* Registration disabled: accounts are admin-provisioned */}
+        <Route path="/register" element={<Navigate to="/login" replace />} />
+  <Route path="/forgot-password" element={<ForgotPassword />} />
+  <Route path="/reset-password" element={<ResetPassword />} />
+  <Route path="/change-password-public" element={<PublicChangePassword />} />
 
         <Route
           path="/admin/*"
@@ -92,7 +101,14 @@ export default function App() {
         }
       />
 
+      <Route
+        path="/change-password"
+        element={<ChangePassword />}
+      />
+
       <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Fallback: redirect unknown routes to login to avoid blank screens */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
     </ThemeProvider>
   )

@@ -35,6 +35,10 @@ export default function useNotifications() {
     // Listen for new notifications
     socket.on('new_notification', (notification) => {
       console.log('Received new notification:', notification)
+      // If driver, ignore emergency-type notifications entirely
+      if (user?.role === 'driver' && (notification?.type === 'emergency' || notification?.notif_type === 'emergency')) {
+        return;
+      }
       
       // Add to notifications list
       setNotifications(prev => [notification, ...prev])
@@ -65,15 +69,13 @@ export default function useNotifications() {
     try {
       setLoading(true)
       
-      let endpoint = '/notifications'
-      if (user.role === 'parent') {
-        endpoint = '/parents/notifications'
-      } else if (user.role === 'driver') {
-        endpoint = '/drivers/notifications'
+      // Use generic endpoint for all roles to avoid route conflicts
+      const { data } = await axiosInstance.get('/notifications')
+      let notifList = data.notifications || []
+      // Safety filter on client as well (in case backend changes)
+      if (user.role === 'driver') {
+        notifList = notifList.filter(n => (n?.type || n?.notif_type) !== 'emergency')
       }
-      
-      const { data } = await axiosInstance.get(endpoint)
-      const notifList = data.notifications || []
       
       setNotifications(notifList)
       setUnreadCount(notifList.filter(n => !n.is_read).length)
@@ -92,15 +94,8 @@ export default function useNotifications() {
     if (!user?.id) return
     
     try {
-      let endpoint = '/notifications/unread/count'
-      if (user.role === 'parent') {
-        endpoint = '/parents/notifications/unread/count'
-      } else if (user.role === 'driver') {
-        endpoint = '/drivers/notifications/unread/count'
-      }
-      
-      const { data } = await axiosInstance.get(endpoint)
-      setUnreadCount(data.unread_count || 0)
+  const { data } = await axiosInstance.get('/notifications/unread/count')
+  setUnreadCount(data.unread_count || 0)
     } catch (error) {
       console.error('Error loading unread count:', error)
       // Don't throw, just set to 0
@@ -111,12 +106,8 @@ export default function useNotifications() {
   // Mark as read
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      let endpoint = `/notifications/${notificationId}`
-      if (user.role === 'parent') {
-        endpoint = `/parents/notifications/${notificationId}/read`
-      }
-      
-      await axiosInstance.put(endpoint, { is_read: true })
+      // Generic mark-as-read
+      await axiosInstance.put(`/notifications/${notificationId}`, { is_read: true })
       
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
@@ -130,12 +121,8 @@ export default function useNotifications() {
   // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
     try {
-      let endpoint = `/notifications/${notificationId}`
-      if (user.role === 'parent') {
-        endpoint = `/parents/notifications/${notificationId}`
-      }
-      
-      await axiosInstance.delete(endpoint)
+      // Generic delete
+      await axiosInstance.delete(`/notifications/${notificationId}`)
       
       setNotifications(prev => prev.filter(n => n.id !== notificationId))
       const notification = notifications.find(n => n.id === notificationId)

@@ -14,25 +14,30 @@ import {
   Sun,
   Moon,
   Bell,
-  Languages
+  
 } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSwitcher from '../common/LanguageSwitcher';
+import { useAuth } from '../../hooks/useAuth';
 import { t } from '../../i18n';
 import NotificationBadge from '../common/NotificationBadge';
 import DriverHome from '../../pages/driver/Home';
 import DriverMap from '../../pages/driver/Map';
 import DriverTrip from '../../pages/driver/Trip';
 import DriverNotifications from '../../pages/driver/Notifications';
+import Modal from '../common/Modal';
 
 export default function DriverLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, clearUser } = useUserStore();
+  const { user } = useUserStore();
   const { theme, toggleTheme } = useTheme();
-  const { language, toggleLanguage } = useLanguage();
+  const { language } = useLanguage();
+  const { logout } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const navigation = [
     { name: t(language, 'home'), href: 'home', icon: Home },
@@ -40,9 +45,8 @@ export default function DriverLayout() {
   ];
 
   const handleLogout = () => {
-    try { localStorage.removeItem('token'); } catch(e) {}
-    clearUser();
-    navigate('/login');
+    try { logout(); } catch(e) {}
+    navigate('/login', { replace: true });
   };
 
   const isCurrentPath = (path) => {
@@ -160,16 +164,8 @@ export default function DriverLayout() {
             {t(language, 'utilities')}
           </p>
           
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group"
-          >
-            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 mr-3 group-hover:scale-110 transition-transform duration-200">
-              <Languages className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            {language === 'vi' ? 'English' : 'Tiếng Việt'}
-          </button>
+          {/* Language Switcher - styled like quick action button */}
+          <LanguageSwitcher className="w-full" variant="action" />
           
           {/* Theme Toggle */}
           <button
@@ -186,19 +182,13 @@ export default function DriverLayout() {
             {t(language, theme === 'dark' ? 'light_mode' : 'dark_mode')}
           </button>
 
-          {/* Emergency Alert Button */}
-          <button className="w-full flex items-center px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group border-2 border-transparent hover:border-red-200 dark:hover:border-red-800">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 mr-3 group-hover:scale-110 transition-transform duration-200">
-              <AlertTriangle className="h-5 w-5 animate-pulse" />
-            </div>
-            {t(language, 'emergency_report')}
-          </button>
+          {/* Removed Emergency Alert quick action */}
         </div>
 
         {/* Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
           <button
-            onClick={handleLogout}
+            onClick={() => setConfirmOpen(true)}
             className="w-full flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-md group"
           >
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 mr-3 group-hover:scale-110 transition-all duration-200">
@@ -245,6 +235,28 @@ export default function DriverLayout() {
           </Routes>
         </main>
       </div>
+
+      {/* Confirm Logout Modal */}
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={t(language,'logout')} size="sm">
+        <div className="space-y-4">
+          <p className="text-gray-700 dark:text-gray-300">{t(language,'confirm_logout')}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              {t(language,'cancel')}
+            </button>
+            <button
+              onClick={() => { setConfirmOpen(false); handleLogout(); }}
+              className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+            >
+              {t(language,'logout')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+ 

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Bus, Users, AlertTriangle, MapPin, CheckCircle, XCircle, Navigation } from 'lucide-react';
+import { Clock, Bus, Users, MapPin, CheckCircle, XCircle, Navigation } from 'lucide-react';
 import { AlertBanner } from '../../components/common/AlertBanner';
 import { Button } from '../../components/common/Button';
 import { StatsCard } from '../../components/common/StatsCard';
 import { StatCardSkeleton, CardSkeleton } from '../../components/common/Skeleton';
+import { useUserStore } from '../../store/useUserStore';
+import { t } from '../../i18n';
 import { 
   getDriverSchedule, 
   getScheduleStudents, 
   updateTripStatus, 
-  sendEmergencyAlert, 
   updateDriverLocation,
   startTrip,
   completeTrip
@@ -17,12 +18,13 @@ import {
 
 export default function DriverHome() {
   const navigate = useNavigate();
+  const { lang } = useUserStore();
   const [schedules, setSchedules] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState(null);
-  const [emergencyAlert, setEmergencyAlert] = useState('');
+  
 
   // Fetch real data from API
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function DriverHome() {
           // Show warning if driver profile not found or not active
           setAlert({ 
             type: 'warning', 
-            message: scheduleData.message || 'Chưa có lịch trình nào được gán' 
+            message: t(lang, 'no_schedules_assigned_short') 
           });
           setSchedules([]);
         } else if (scheduleData.success && scheduleData.schedules) {
@@ -46,11 +48,11 @@ export default function DriverHome() {
           if (scheduleData.schedules.length === 0) {
             setAlert({ 
               type: 'info', 
-              message: scheduleData.message || 'Chưa có lịch trình nào. Vui lòng liên hệ quản trị viên để được phân công.' 
+              message: t(lang, 'no_schedules_contact_admin') 
             });
           } else {
             // If there's an active schedule, fetch its students
-            const activeSchedule = scheduleData.schedules.find(s => s.status === 'in-progress');
+            const activeSchedule = scheduleData.schedules.find(s => s.status === 'active');
             if (activeSchedule) {
               setSelectedSchedule(activeSchedule);
               console.log('Loading students for active schedule:', activeSchedule.schedule_id);
@@ -66,7 +68,7 @@ export default function DriverHome() {
         console.error('Error fetching data:', error);
         setAlert({ 
           type: 'error', 
-          message: error.response?.data?.message || 'Không thể tải dữ liệu. Vui lòng kiểm tra kết nối hoặc đăng nhập lại.' 
+          message: error.response?.data?.message || t(lang, 'data_load_failed_generic') 
         });
       } finally {
         setLoading(false);
@@ -90,39 +92,19 @@ export default function DriverHome() {
         
         setAlert({ 
           type: 'success', 
-          message: response.message || 'Cập nhật trạng thái học sinh thành công!' 
+          message: response.message || t(lang, 'update_status_success') 
         });
       }
     } catch (error) {
       console.error('Error updating student status:', error);
       setAlert({ 
         type: 'error', 
-        message: error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!' 
+        message: error.response?.data?.message || t(lang, 'update_status_failed') 
       });
     }
   };
 
-  const sendEmergencyAlertHandler = async () => {
-    if (!emergencyAlert.trim()) return;
-    
-    try {
-      const response = await sendEmergencyAlert('emergency', emergencyAlert);
-      
-      if (response.success) {
-        setAlert({ 
-          type: 'success', 
-          message: response.message || 'Cảnh báo khẩn cấp đã được gửi!' 
-        });
-        setEmergencyAlert('');
-      }
-    } catch (error) {
-      console.error('Error sending emergency alert:', error);
-      setAlert({ 
-        type: 'error', 
-        message: error.response?.data?.message || 'Có lỗi xảy ra khi gửi cảnh báo!' 
-      });
-    }
-  };
+  
 
   const updateLocation = () => {
     if ("geolocation" in navigator) {
@@ -134,13 +116,13 @@ export default function DriverHome() {
               position.coords.longitude,
               position.coords.accuracy
             );
-            setAlert({ type: 'success', message: 'Vị trí đã được cập nhật!' });
+            setAlert({ type: 'success', message: t(lang, 'location_updated') });
           } catch (error) {
-            setAlert({ type: 'error', message: 'Có lỗi xảy ra khi cập nhật vị trí!' });
+            setAlert({ type: 'error', message: t(lang, 'location_update_failed') });
           }
         },
         (error) => {
-          setAlert({ type: 'error', message: 'Không thể lấy vị trí hiện tại!' });
+          setAlert({ type: 'error', message: t(lang, 'cannot_get_current_location') });
         }
       );
     }
@@ -154,7 +136,7 @@ export default function DriverHome() {
         setStudents(studentsData.students);
       }
     } catch (error) {
-      setAlert({ type: 'error', message: 'Không thể tải danh sách học sinh!' });
+  setAlert({ type: 'error', message: t(lang, 'load_students_failed') });
     }
   };
 
@@ -162,7 +144,7 @@ export default function DriverHome() {
     try {
       const response = await startTrip(scheduleId);
       if (response.success) {
-        setAlert({ type: 'success', message: 'Đã bắt đầu chuyến đi!' });
+  setAlert({ type: 'success', message: t(lang, 'start_trip_success') });
         // Refresh schedules
         const scheduleData = await getDriverSchedule();
         if (scheduleData.success && scheduleData.schedules) {
@@ -193,7 +175,7 @@ export default function DriverHome() {
       }
     } catch (error) {
       console.error('Error starting trip:', error);
-      setAlert({ type: 'error', message: error.response?.data?.message || 'Không thể bắt đầu chuyến đi!' });
+  setAlert({ type: 'error', message: error.response?.data?.message || t(lang, 'start_trip_failed') });
     }
   };
 
@@ -201,7 +183,7 @@ export default function DriverHome() {
     try {
       const response = await completeTrip(scheduleId);
       if (response.success) {
-        setAlert({ type: 'success', message: 'Đã hoàn thành chuyến đi!' });
+  setAlert({ type: 'success', message: t(lang, 'complete_trip_success') });
         // Refresh schedules
         const scheduleData = await getDriverSchedule();
         if (scheduleData.success && scheduleData.schedules) {
@@ -212,7 +194,7 @@ export default function DriverHome() {
       }
     } catch (error) {
       console.error('Error completing trip:', error);
-      setAlert({ type: 'error', message: error.response?.data?.message || 'Không thể hoàn thành chuyến đi!' });
+  setAlert({ type: 'error', message: error.response?.data?.message || t(lang, 'complete_trip_failed') });
     }
   };
 
@@ -339,11 +321,11 @@ export default function DriverHome() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Bảng Điều Khiển
+                  {t(lang,'driver_dashboard')}
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center mt-1">
                   <Clock className="w-4 h-4 mr-1" />
-                  {new Date().toLocaleDateString('vi-VN', { 
+                  {new Date().toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { 
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 
@@ -357,7 +339,7 @@ export default function DriverHome() {
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg transform hover:scale-105 transition-all duration-200"
             >
               <Navigation className="w-5 h-5 mr-2 animate-pulse" />
-              Cập nhật vị trí
+              {t(lang,'update_location')}
             </Button>
           </div>
         </div>
@@ -378,7 +360,7 @@ export default function DriverHome() {
           <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Lịch trình hôm nay</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t(lang,'today_schedules')}</p>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   {schedules.length}
                 </h3>
@@ -392,7 +374,7 @@ export default function DriverHome() {
           <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Học sinh đang chờ</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t(lang,'waiting_students')}</p>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
                   {schedules.reduce((sum, s) => sum + s.pending_pickups, 0)}
                 </h3>
@@ -406,7 +388,7 @@ export default function DriverHome() {
           <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Đang trên xe</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t(lang,'on_bus')}</p>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                   {schedules.reduce((sum, s) => sum + s.onboard_students, 0)}
                 </h3>
@@ -420,7 +402,7 @@ export default function DriverHome() {
           <div className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Đã hoàn thành</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t(lang,'completed')}</p>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   {schedules.reduce((sum, s) => sum + s.completed_drops, 0)}
                 </h3>
@@ -439,7 +421,7 @@ export default function DriverHome() {
               <div className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600">
                 <h2 className="text-xl font-bold text-white flex items-center">
                   <Bus className="w-6 h-6 mr-3" />
-                  Lịch trình hôm nay
+                  {t(lang,'today_schedules')}
                 </h2>
               </div>
               <div className="p-6">
@@ -457,13 +439,13 @@ export default function DriverHome() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md ${
-                            schedule.status === 'in-progress' 
+                            schedule.status === 'active' 
                               ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
                               : schedule.status === 'completed'
                               ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
                               : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
                           }`}>
-                            {schedule.status === 'in-progress' ? '🚀 Đang chạy' : schedule.status === 'completed' ? '✅ Hoàn thành' : '📅 Đã lên lịch'}
+                            {schedule.status === 'active' ? `🚀 ${t(lang,'in_progress')}` : schedule.status === 'completed' ? `✅ ${t(lang,'completed')}` : `📅 ${t(lang,'scheduled')}`}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -491,19 +473,19 @@ export default function DriverHome() {
                           <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                             {schedule.pending_pickups}
                           </div>
-                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">Chờ đón</div>
+                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">{t(lang,'waiting_pickup')}</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
                           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {schedule.onboard_students}
                           </div>
-                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">Trên xe</div>
+                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">{t(lang,'on_bus')}</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
                           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {schedule.completed_drops}
                           </div>
-                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">Hoàn thành</div>
+                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">{t(lang,'completed')}</div>
                         </div>
                       </div>
 
@@ -518,10 +500,10 @@ export default function DriverHome() {
                             className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg transform hover:scale-105 transition-all duration-200"
                           >
                             <Navigation className="w-5 h-5 mr-2" />
-                            Bắt đầu
+                            {t(lang,'start_trip')}
                           </Button>
                         )}
-                        {schedule.status === 'in-progress' && (
+                        {schedule.status === 'active' && (
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -530,7 +512,7 @@ export default function DriverHome() {
                             className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg transform hover:scale-105 transition-all duration-200"
                           >
                             <CheckCircle className="w-5 h-5 mr-2" />
-                            Hoàn thành
+                            {t(lang,'complete_trip')}
                           </Button>
                         )}
                       </div>
@@ -549,7 +531,7 @@ export default function DriverHome() {
                 <div className="px-6 py-5 bg-gradient-to-r from-green-600 to-emerald-600">
                   <h3 className="text-xl font-bold text-white flex items-center">
                     <Users className="w-6 h-6 mr-3" />
-                    Danh sách học sinh
+                    {t(lang,'student_list')}
                   </h3>
                 </div>
                 <div className="p-6">
@@ -579,10 +561,10 @@ export default function DriverHome() {
                           }`}>
                             {getStatusIcon(student.trip_status)}
                             <span className="ml-1.5">
-                              {student.trip_status === 'waiting' && 'Chờ đón'}
-                              {student.trip_status === 'onboard' && 'Trên xe'}
-                              {student.trip_status === 'dropped' && 'Đã trả'}
-                              {student.trip_status === 'absent' && 'Vắng'}
+                              {student.trip_status === 'waiting' && t(lang,'waiting_pickup')}
+                              {student.trip_status === 'onboard' && t(lang,'on_bus')}
+                              {student.trip_status === 'dropped' && t(lang,'dropped_off')}
+                              {student.trip_status === 'absent' && t(lang,'absent')}
                             </span>
                           </div>
                         </div>
@@ -595,7 +577,7 @@ export default function DriverHome() {
                               className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transform hover:scale-105 transition-all"
                             >
                               <Bus className="w-4 h-4 mr-1" />
-                              Đón lên
+                              {t(lang,'pick_up')}
                             </Button>
                             <Button
                               size="sm"
@@ -604,7 +586,7 @@ export default function DriverHome() {
                               className="border-2 hover:bg-gray-100 dark:hover:bg-gray-700 transform hover:scale-105 transition-all"
                             >
                               <XCircle className="w-4 h-4 mr-1" />
-                              Vắng
+                              {t(lang,'absent')}
                             </Button>
                           </div>
                         )}
@@ -616,7 +598,7 @@ export default function DriverHome() {
                             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 mt-3 shadow-md transform hover:scale-105 transition-all"
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
-                            Trả học sinh
+                            {t(lang,'drop_off')}
                           </Button>
                         )}
                       </div>
@@ -626,35 +608,11 @@ export default function DriverHome() {
               </div>
             )}
 
-            {/* Emergency Alert */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
-              <div className="px-6 py-5 bg-gradient-to-r from-red-600 to-pink-600">
-                <h3 className="text-xl font-bold text-white flex items-center">
-                  <AlertTriangle className="w-6 h-6 mr-3 animate-pulse" />
-                  Cảnh báo khẩn cấp
-                </h3>
-              </div>
-              <div className="p-6">
-                <textarea
-                  value={emergencyAlert}
-                  onChange={(e) => setEmergencyAlert(e.target.value)}
-                  placeholder="Mô tả tình huống khẩn cấp..."
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white backdrop-blur-sm mb-4 transition-all duration-200"
-                  rows={4}
-                />
-                <Button
-                  onClick={sendEmergencyAlertHandler}
-                  disabled={!emergencyAlert.trim()}
-                  className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transform hover:scale-105 transition-all duration-200"
-                >
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  Gửi cảnh báo ngay
-                </Button>
-              </div>
-            </div>
+            
           </div>
         </div>
       </div>
+      
     </div>
   );
 }

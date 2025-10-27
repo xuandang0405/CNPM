@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import morgan from 'morgan';
+import dotenv from 'dotenv';
 import { testConnection } from './db/connection.js';
 import authRouter from './routes/auth.js';
 import adminRouter from './routes/admin.js'
@@ -13,6 +14,9 @@ import schedulesRouter from './routes/schedules.js';
 import tripsRouter from './routes/trips.js';
 import notificationsRouter from './routes/notifications.js';
 import parentsRouter from './routes/parents.js';
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);

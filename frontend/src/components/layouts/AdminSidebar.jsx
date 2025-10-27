@@ -20,6 +20,16 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }) 
       )
     },
     { 
+      to: '/admin/password-resets', 
+      label: t(language, 'password_resets_page_title'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2" />
+        </svg>
+      )
+    },
+    { 
       to: '/admin/tracking', 
       label: t(language, 'tracking'),
       icon: (
@@ -75,11 +85,20 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }) 
       )
     },
     { 
-      to: '/admin/users', 
+      to: '/admin/parents', 
       label: t(language, 'parents'),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+        </svg>
+      )
+    },
+    { 
+      to: '/admin/users', 
+      label: t(language, 'accounts'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       )
     },
@@ -101,6 +120,16 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }) 
         </svg>
       ),
       showBadge: true
+    },
+    { 
+      to: '/admin/notifications-history', 
+      label: t(language, 'notifications_history'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+        </svg>
+      )
     },
   ]
 

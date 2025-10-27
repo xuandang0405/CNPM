@@ -13,11 +13,15 @@ export const useTheme = () => {
 export const ThemeProvider = ({ children }) => {
     const [isDark, setIsDark] = useState(() => {
         // Check localStorage first, then system preference
-        const stored = localStorage.getItem('theme')
-        if (stored) {
-            return stored === 'dark'
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('theme') : null
+        const prefers = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
+        const dark = stored ? stored === 'dark' : prefers
+        // Apply immediately to avoid flash
+        if (typeof document !== 'undefined') {
+            const root = document.documentElement
+            if (dark) root.classList.add('dark'); else root.classList.remove('dark')
         }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches
+        return dark
     })
 
     useEffect(() => {
@@ -32,9 +36,7 @@ export const ThemeProvider = ({ children }) => {
         }
     }, [isDark])
 
-    const toggleTheme = () => {
-        setIsDark(prev => !prev)
-    }
+    const toggleTheme = () => { setIsDark(prev => !prev) }
 
     const setTheme = (theme) => {
         setIsDark(theme === 'dark')

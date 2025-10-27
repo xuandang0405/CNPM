@@ -5,6 +5,7 @@ import { createUser } from '../api/users'
 import { t } from '../i18n'
 import { useUserStore } from '../store/useUserStore'
 import AlertBanner from '../components/common/AlertBanner'
+import LanguageSwitcher from '../components/common/LanguageSwitcher'
 
 export default function Register(){
   const [name, setName] = useState('')
@@ -27,31 +28,31 @@ export default function Register(){
     
     // Validation
     if (!name.trim()) {
-      setError('Vui lòng nhập họ và tên')
+      setError(t(lang,'enter_full_name'))
       return
     }
     if (!phone.trim()) {
-      setError('Vui lòng nhập số điện thoại')
+      setError(t(lang,'please_enter_phone'))
       return
     }
     if (!email.trim()) {
-      setEmailError('Vui lòng nhập email')
+      setEmailError(t(lang,'please_enter_email'))
       return
     }
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setEmailError('Email không hợp lệ')
+      setEmailError(t(lang,'invalid_email'))
       return
     }
     if (!password) {
-      setPasswordError('Vui lòng nhập mật khẩu')
+      setPasswordError(t(lang,'enter_password'))
       return
     }
     if (password.length < 6) {
-      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự')
+      setPasswordError(t(lang,'password_min6'))
       return
     }
     if (password !== confirmPassword) {
-      setConfirmPasswordError('Mật khẩu xác nhận không khớp')
+      setConfirmPasswordError(t(lang,'confirm_password_mismatch'))
       return
     }
     
@@ -59,33 +60,35 @@ export default function Register(){
       console.log('Register attempt', { email, role })
       await createUser({ name, phone, email, password, role })
       console.log('Register success', { email })
-      setSuccess('✅ Đăng ký thành công! Đang chuyển đến trang đăng nhập...')
+      setSuccess(t(lang,'register_success_redirect'))
       setTimeout(()=>navigate('/login'), 1500)
     }catch(err){
       console.error('Register error', err)
       const code = err && err.error
-      if (code === 'invalid_email') setEmailError('Email không hợp lệ')
-      else if (code === 'password_too_short') setPasswordError('Mật khẩu phải có ít nhất 6 ký tự')
-      else if (code === 'email already in use') setEmailError('Email đã được sử dụng')
-      else setError('❌ Đăng ký thất bại. Vui lòng thử lại.')
+      if (code === 'invalid_email') setEmailError(t(lang,'invalid_email'))
+      else if (code === 'password_too_short') setPasswordError(t(lang,'password_min6'))
+      else if (code === 'email already in use') setEmailError(t(lang,'invalid_email'))
+      else setError(t(lang,'register_failed'))
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-4">
       <div className="w-full max-w-md">
         {/* Card với hiệu ứng glass */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20 dark:border-gray-700">
           {/* Header với animation */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full mb-4 shadow-lg animate-bounce">
               <span className="text-4xl">🎓</span>
             </div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              Tạo tài khoản mới
+              {t(lang,'register_title')}
             </h2>
-            <p className="text-gray-600">Đăng ký để theo dõi con bạn</p>
+            <p className="text-gray-600 dark:text-gray-300">{t(lang,'register_subtitle')}</p>
           </div>
+
+          <div className="flex justify-end mb-6"><LanguageSwitcher /></div>
 
           {/* Alerts */}
           {error && (
@@ -102,13 +105,13 @@ export default function Register(){
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name Input */}
             <div className="group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span>👤</span> Họ và tên
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <span>👤</span> {t(lang,'full_name')}
               </label>
               <input 
                 type="text"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none" 
-                placeholder="Nguyễn Văn A" 
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" 
+                placeholder={t(lang,'name_placeholder')} 
                 value={name} 
                 onChange={e=>setName(e.target.value)} 
               />
@@ -116,13 +119,13 @@ export default function Register(){
 
             {/* Phone Input */}
             <div className="group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span>📱</span> Số điện thoại
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <span>📱</span> {t(lang,'phone')}
               </label>
               <input 
                 type="tel"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none" 
-                placeholder="0912345678" 
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" 
+                placeholder={t(lang,'phone_placeholder')} 
                 value={phone} 
                 onChange={e=>setPhone(e.target.value)} 
               />
@@ -130,22 +133,22 @@ export default function Register(){
 
             {/* Email Input */}
             <div className="group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span>📧</span> Email
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <span>📧</span> {t(lang,'email')}
               </label>
               <input 
                 type="email"
-                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
                   emailError 
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
-                    : 'border-gray-200 focus:border-purple-500 focus:ring-purple-100'
+                    : 'border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:ring-purple-100'
                 }`}
-                placeholder="example@email.com" 
+                placeholder={t(lang,'email_placeholder')} 
                 value={email} 
                 onChange={e=>setEmail(e.target.value)} 
               />
               {emailError && (
-                <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                <p className="text-red-600 dark:text-red-300 text-sm mt-2 flex items-center gap-1">
                   <span>⚠️</span> {emailError}
                 </p>
               )}
@@ -153,22 +156,22 @@ export default function Register(){
 
             {/* Password Input */}
             <div className="group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span>🔒</span> Mật khẩu
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <span>🔒</span> {t(lang,'password')}
               </label>
               <input 
                 type="password"
-                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
                   passwordError 
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
-                    : 'border-gray-200 focus:border-purple-500 focus:ring-purple-100'
+                    : 'border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:ring-purple-100'
                 }`}
-                placeholder="Ít nhất 6 ký tự" 
+                placeholder={t(lang,'password_min6')} 
                 value={password} 
                 onChange={e=>setPassword(e.target.value)} 
               />
               {passwordError && (
-                <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                <p className="text-red-600 dark:text-red-300 text-sm mt-2 flex items-center gap-1">
                   <span>⚠️</span> {passwordError}
                 </p>
               )}
@@ -176,31 +179,31 @@ export default function Register(){
 
             {/* Confirm Password Input */}
             <div className="group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span>🔐</span> Xác nhận mật khẩu
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <span>🔐</span> {t(lang,'confirm_password')}
               </label>
               <input 
                 type="password"
-                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
                   confirmPasswordError 
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
-                    : 'border-gray-200 focus:border-purple-500 focus:ring-purple-100'
+                    : 'border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:ring-purple-100'
                 }`}
-                placeholder="Nhập lại mật khẩu" 
+                placeholder={t(lang,'confirm_password_placeholder')} 
                 value={confirmPassword} 
                 onChange={e=>setConfirmPassword(e.target.value)} 
               />
               {confirmPasswordError && (
-                <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                <p className="text-red-600 dark:text-red-300 text-sm mt-2 flex items-center gap-1">
                   <span>⚠️</span> {confirmPasswordError}
                 </p>
               )}
             </div>
 
             {/* Role Info (Auto Parent) */}
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4">
-              <p className="text-sm text-purple-800 font-medium flex items-center gap-2">
-                <span>👨‍👩‍👧</span> Bạn đang đăng ký với vai trò <strong>Phụ huynh</strong>
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800 border-2 border-purple-200 dark:border-gray-700 rounded-xl p-4">
+              <p className="text-sm text-purple-800 dark:text-purple-200 font-medium flex items-center gap-2">
+                <span>👨‍👩‍👧</span> {t(lang,'role_info_parent')}
               </p>
             </div>
 
@@ -209,7 +212,7 @@ export default function Register(){
               type="submit" 
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              Đăng ký ngay 🚀
+              {t(lang,'register_now')} 🚀
             </button>
 
             {/* Divider */}
@@ -218,19 +221,19 @@ export default function Register(){
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Hoặc</span>
+                <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">{t(lang,'or')}</span>
               </div>
             </div>
 
             {/* Login Link */}
             <div className="text-center">
-              <p className="text-gray-600">
-                Đã có tài khoản?{' '}
+              <p className="text-gray-600 dark:text-gray-300">
+                {t(lang,'already_have_account')}{' '}
                 <Link 
                   to="/login" 
                   className="text-purple-600 hover:text-purple-700 font-semibold hover:underline"
                 >
-                  Đăng nhập ngay
+                  {t(lang,'login_now')}
                 </Link>
               </p>
             </div>
@@ -238,11 +241,11 @@ export default function Register(){
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-6">
-          Bằng việc đăng ký, bạn đồng ý với{' '}
-          <a href="#" className="text-purple-600 hover:underline">Điều khoản dịch vụ</a>
-          {' '}và{' '}
-          <a href="#" className="text-purple-600 hover:underline">Chính sách bảo mật</a>
+        <p className="text-center text-gray-500 dark:text-gray-400 text-sm mt-6">
+          {t(lang,'agree_terms')}{' '}
+          <a href="#" className="text-purple-600 hover:underline">{t(lang,'terms_of_service')}</a>
+          {' '} {t(lang,'and') ? t(lang,'and') : 'và'} {' '}
+          <a href="#" className="text-purple-600 hover:underline">{t(lang,'privacy_policy')}</a>
         </p>
       </div>
     </div>

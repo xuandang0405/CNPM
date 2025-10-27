@@ -36,19 +36,7 @@ export const updateTripStatus = async (tripId, status, notes = null) => {
   }
 };
 
-// Gửi cảnh báo khẩn cấp
-export const sendEmergencyAlert = async (alertType = 'emergency', message) => {
-  try {
-    const response = await axios.post('/trips/emergency', {
-      alert_type: alertType,
-      message
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending emergency alert:', error);
-    throw error;
-  }
-};
+// Note: Emergency APIs removed.
 
 // Cập nhật vị trí thời gian thực
 export const updateDriverLocation = async (lat, lng, speed = 0, heading = 0, accuracy = 10) => {
@@ -107,6 +95,28 @@ export const completeTrip = async (scheduleId) => {
     return response.data;
   } catch (error) {
     console.error('Error completing trip:', error);
+    throw error;
+  }
+};
+
+// Admin: get active drivers currently running trips
+export const getActiveDriversAdmin = async () => {
+  try {
+    const response = await axios.get('/trips/admin/active-drivers');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching active drivers (admin):', error);
+    throw error;
+  }
+};
+
+// Admin: get students for a specific schedule
+export const getScheduleStudentsAdmin = async (scheduleId) => {
+  try {
+    const response = await axios.get(`/trips/admin/schedule/${scheduleId}/students`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching schedule students (admin):', error);
     throw error;
   }
 };

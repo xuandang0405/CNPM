@@ -57,3 +57,49 @@ export async function loginUser({ email, password }){
 export async function listUsers(){
 	return []
 }
+
+export async function forgotPassword({ email }){
+	try{
+		const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email })
+		})
+		return await handleResponse(res)
+	}catch(e){ if (e && e.error) throw e; throw { error: 'network_error' } }
+}
+
+export async function changePassword({ current_password, new_password }){
+	try{
+		const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+		const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+			body: JSON.stringify({ current_password, new_password })
+		})
+		return await handleResponse(res)
+	}catch(e){ if (e && e.error) throw e; throw { error: 'network_error' } }
+}
+
+// Placeholder for token-based reset (unused in current admin-approval flow)
+export async function resetPassword({ token, new_password }){
+	try{
+		const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ token, new_password })
+		})
+		return await handleResponse(res)
+	}catch(e){ if (e && e.error) throw e; throw { error: 'network_error' } }
+}
+
+export async function changePasswordPublic({ email, current_password, new_password }){
+	try{
+		const res = await fetch(`${API_BASE}/api/auth/change-password-public`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, current_password, new_password })
+		})
+		return await handleResponse(res)
+	}catch(e){ if (e && e.error) throw e; throw { error: 'network_error' } }
+}

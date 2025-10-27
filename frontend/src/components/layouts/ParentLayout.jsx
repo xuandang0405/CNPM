@@ -1,26 +1,33 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useUserStore } from '../../store/useUserStore'
+import { useAuth } from '../../hooks/useAuth'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { t } from '../../i18n'
-import { Home, MapPin, Bell, LogOut, User, Languages } from 'lucide-react'
+import { Home, MapPin, Bell, LogOut, User } from 'lucide-react'
 import NotificationBadge from '../common/NotificationBadge'
 import ThemeSwitcher from '../common/ThemeSwitcher'
+import Modal from '../common/Modal'
+import useNotifications from '../../hooks/useNotifications'
+import LanguageSwitcher from '../common/LanguageSwitcher'
 
 export default function ParentLayout({ children }) {
-  const { user, logout } = useUserStore();
-  const { language, toggleLanguage } = useLanguage();
+  const { user } = useUserStore();
+  const { logout } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const { unreadCount } = useNotifications()
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    try { logout(); } catch(e) { /* noop */ }
+    navigate('/login', { replace: true });
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -55,17 +62,8 @@ export default function ParentLayout({ children }) {
 
             {/* User Menu */}
             <div className="flex items-center gap-4">
-              {/* Language Toggle */}
-              <button
-                onClick={toggleLanguage}
-                className="flex items-center gap-2 p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 hover:shadow-md transition-all duration-200"
-                title={language === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
-              >
-                <Languages className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                <span className="hidden sm:inline text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {language === 'vi' ? 'EN' : 'VI'}
-                </span>
-              </button>
+              {/* Language Switcher */}
+              <LanguageSwitcher />
               
               {/* Theme Switcher */}
               <ThemeSwitcher />
@@ -75,7 +73,7 @@ export default function ParentLayout({ children }) {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={() => setConfirmOpen(true)}
                 className="flex items-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg font-medium transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -110,13 +108,41 @@ export default function ParentLayout({ children }) {
           </Link>
           <Link 
             to="/parent/notifications" 
-            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="relative flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            <div className="relative">
+              <Bell className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full animate-pulse">
+                  {unreadCount > 99 ? '99' : unreadCount}
+                </span>
+              )}
+            </div>
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{t(language, 'notifications')}</span>
           </Link>
         </div>
       </nav>
+
+      {/* Confirm Logout Modal */}
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={t(language, 'logout')} size="sm">
+        <div className="space-y-4">
+          <p className="text-gray-700 dark:text-gray-300">{t(language, 'confirm_logout')}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              {t(language,'cancel')}
+            </button>
+            <button
+              onClick={() => { setConfirmOpen(false); handleLogout(); }}
+              className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+            >
+              {t(language, 'logout')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -243,41 +243,7 @@ router.post('/send', authMiddleware, async (req, res) => {
     }
 });
 
-// 5. UPDATE: Đánh dấu notification đã đọc
-// PUT /api/notifications/:id
-router.put('/:id', authMiddleware, async (req, res) => {
-    try {
-        const notifId = req.params.id;
-        const { is_read } = req.body;
-        
-        await pool.query(
-            'UPDATE notifications SET is_read = ? WHERE id = ? AND user_id = ?',
-            [is_read !== undefined ? is_read : true, notifId, req.user.id]
-        );
-        
-        res.json({ ok: true, id: notifId });
-    } catch (err) {
-        console.error('API /notifications PUT error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
-
-// 6. DELETE: Xóa notification
-// DELETE /api/notifications/:id
-router.delete('/:id', authMiddleware, async (req, res) => {
-    try {
-        await pool.query(
-            'DELETE FROM notifications WHERE id = ? AND user_id = ?',
-            [req.params.id, req.user.id]
-        );
-        res.json({ ok: true });
-    } catch (err) {
-        console.error('API /notifications DELETE error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
-
-// 7. BULK: Đánh dấu tất cả notifications là đã đọc
+// 5. BULK: Đánh dấu tất cả notifications là đã đọc
 // PUT /api/notifications/mark-all-read
 router.put('/mark-all-read', authMiddleware, async (req, res) => {
     try {
@@ -336,7 +302,7 @@ router.post('/broadcast', authMiddleware, async (req, res) => {
     }
 });
 
-// 9. DELETE: Xóa tất cả read notifications
+// 6. DELETE: Xóa tất cả read notifications
 // DELETE /api/notifications/cleanup-read
 router.delete('/cleanup-read', authMiddleware, async (req, res) => {
     try {
@@ -349,6 +315,40 @@ router.delete('/cleanup-read', authMiddleware, async (req, res) => {
         res.json({ ok: true, deleted_count: result.affectedRows });
     } catch (err) {
         console.error('API /notifications/cleanup-read error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// 7. UPDATE: Đánh dấu notification đã đọc (cần đặt SAU các route cụ thể như /mark-all-read)
+// PUT /api/notifications/:id
+router.put('/:id', authMiddleware, async (req, res) => {
+    try {
+        const notifId = req.params.id;
+        const { is_read } = req.body;
+        
+        await pool.query(
+            'UPDATE notifications SET is_read = ? WHERE id = ? AND user_id = ?',
+            [is_read !== undefined ? is_read : true, notifId, req.user.id]
+        );
+        
+        res.json({ ok: true, id: notifId });
+    } catch (err) {
+        console.error('API /notifications PUT error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// 8. DELETE: Xóa notification (cần đặt SAU route /cleanup-read)
+// DELETE /api/notifications/:id
+router.delete('/:id', authMiddleware, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.id]
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('API /notifications DELETE error', err);
         res.status(500).json({ error: 'internal_error' });
     }
 });

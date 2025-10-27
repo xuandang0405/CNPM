@@ -6,6 +6,7 @@ import './index.css'
 import { useUserStore } from './store/useUserStore'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { ToastProvider } from './components/common/ToastProvider'
 
 function ThemeApplier({ children }){
   const { theme } = useUserStore()
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <LanguageProvider>
           <ThemeApplier>
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </ThemeApplier>
         </LanguageProvider>
       </BrowserRouter>

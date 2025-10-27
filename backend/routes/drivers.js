@@ -49,7 +49,114 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-// 2. GET single driver
+// ======================= NOTIFICATIONS (placed before ":id" routes to avoid conflicts) =======================
+
+// GET /api/drivers/notifications - Lấy danh sách notifications cho driver
+router.get('/notifications', authMiddleware, async (req, res) => {
+    console.log('API: GET /api/drivers/notifications called');
+    try {
+        const { read, limit } = req.query;
+        const userId = req.user.id;
+        console.log('API: Driver notifications for user:', userId);
+        
+        let query = `
+            SELECT n.id, n.user_id, n.sender_id, n.sender_role, n.target_role, 
+                   n.title, n.body, n.type, n.priority, n.is_read, n.created_at,
+                   u.full_name as sender_name
+            FROM notifications n
+            LEFT JOIN users u ON n.sender_id = u.id
+            WHERE n.user_id = ?`;
+        let params = [userId];
+        
+        // Exclude emergency notifications from driver inbox
+        query += " AND (n.type IS NULL OR n.type <> 'emergency')";
+
+        if (read !== undefined) {
+            if (read === 'true') {
+                query += ' AND n.is_read = TRUE';
+            } else if (read === 'false') {
+                query += ' AND n.is_read = FALSE';
+            }
+        }
+        
+        query += ' ORDER BY n.created_at DESC LIMIT ?';
+        params.push(parseInt(limit) || 100);
+        
+        const [notifications] = await pool.query(query, params);
+        res.json({ count: notifications.length, notifications });
+    } catch (err) {
+        console.error('API /drivers/notifications GET error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// GET /api/drivers/notifications/unread/count - Lấy số lượng notifications chưa đọc
+router.get('/notifications/unread/count', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const [result] = await pool.query(
+            "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE AND (type IS NULL OR type <> 'emergency')",
+            [userId]
+        );
+        
+        res.json({ unread_count: result[0]?.count || 0 });
+    } catch (err) {
+        console.error('API /drivers/notifications/unread/count error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// PUT /api/drivers/notifications/:id/read - Đánh dấu notification đã đọc
+router.put('/notifications/:id/read', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        
+        // Kiểm tra notification thuộc về user này
+        const [check] = await pool.query(
+            'SELECT id FROM notifications WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+        
+        if (!check[0]) {
+            return res.status(404).json({ error: 'not_found' });
+        }
+        
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+        
+        res.json({ success: true, message: 'Notification marked as read' });
+    } catch (err) {
+        console.error('API /drivers/notifications/:id/read PUT error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// DELETE /api/drivers/notifications/:id - Xóa notification
+router.delete('/notifications/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        
+        const [result] = await pool.query(
+            'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'not_found' });
+        }
+        
+        res.json({ success: true, message: 'Notification deleted' });
+    } catch (err) {
+        console.error('API /drivers/notifications/:id DELETE error', err);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+// 2. GET single driver (placed after notifications to prevent route conflicts)
 // GET /api/drivers/:id
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
@@ -190,108 +297,6 @@ router.get('/user/:user_id', authMiddleware, async (req, res) => {
     }
 });
 
-// ======================= NOTIFICATIONS =======================
-
-// GET /api/drivers/notifications - Lấy danh sách notifications cho driver
-router.get('/notifications', authMiddleware, async (req, res) => {
-    console.log('API: GET /api/drivers/notifications called');
-    try {
-        const { read, limit } = req.query;
-        const userId = req.user.id;
-        console.log('API: Driver notifications for user:', userId);
-        
-        let query = `
-            SELECT n.id, n.user_id, n.sender_id, n.sender_role, n.target_role, 
-                   n.title, n.body, n.type, n.priority, n.is_read, n.created_at,
-                   u.full_name as sender_name
-            FROM notifications n
-            LEFT JOIN users u ON n.sender_id = u.id
-            WHERE n.user_id = ?`;
-        let params = [userId];
-        
-        if (read !== undefined) {
-            if (read === 'true') {
-                query += ' AND n.is_read = TRUE';
-            } else if (read === 'false') {
-                query += ' AND n.is_read = FALSE';
-            }
-        }
-        
-        query += ' ORDER BY n.created_at DESC LIMIT ?';
-        params.push(parseInt(limit) || 100);
-        
-        const [notifications] = await pool.query(query, params);
-        res.json({ count: notifications.length, notifications });
-    } catch (err) {
-        console.error('API /drivers/notifications GET error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
-
-// GET /api/drivers/notifications/unread/count - Lấy số lượng notifications chưa đọc
-router.get('/notifications/unread/count', authMiddleware, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const [result] = await pool.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE',
-            [userId]
-        );
-        
-        res.json({ unread_count: result[0]?.count || 0 });
-    } catch (err) {
-        console.error('API /drivers/notifications/unread/count error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
-
-// PUT /api/drivers/notifications/:id/read - Đánh dấu notification đã đọc
-router.put('/notifications/:id/read', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.id;
-        
-        // Kiểm tra notification thuộc về user này
-        const [check] = await pool.query(
-            'SELECT id FROM notifications WHERE id = ? AND user_id = ?',
-            [id, userId]
-        );
-        
-        if (!check[0]) {
-            return res.status(404).json({ error: 'not_found' });
-        }
-        
-        await pool.query(
-            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?',
-            [id, userId]
-        );
-        
-        res.json({ success: true, message: 'Notification marked as read' });
-    } catch (err) {
-        console.error('API /drivers/notifications/:id/read PUT error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
-
-// DELETE /api/drivers/notifications/:id - Xóa notification
-router.delete('/notifications/:id', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.id;
-        
-        const [result] = await pool.query(
-            'DELETE FROM notifications WHERE id = ? AND user_id = ?',
-            [id, userId]
-        );
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'not_found' });
-        }
-        
-        res.json({ success: true, message: 'Notification deleted' });
-    } catch (err) {
-        console.error('API /drivers/notifications/:id DELETE error', err);
-        res.status(500).json({ error: 'internal_error' });
-    }
-});
+// ======================= END NOTIFICATIONS =======================
 
 export default router;

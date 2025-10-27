@@ -57,3 +57,31 @@ export async function deleteRoute(id) {
         throw error.response?.data || new Error('Failed to delete route')
     }
 }
+
+// Route Stops APIs
+export async function addRouteStop(routeId, payload) {
+    try {
+        const response = await axios.post(`${ROUTES_API}/${routeId}/stops`, payload, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to add route stop')
+    }
+}
+
+export async function updateRouteStop(routeId, stopId, payload) {
+    try {
+        const response = await axios.put(`${ROUTES_API}/${routeId}/stops/${stopId}`, payload, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to update route stop')
+    }
+}
+
+export async function deleteRouteStop(routeId, stopId) {
+    try {
+        const response = await axios.delete(`${ROUTES_API}/${routeId}/stops/${stopId}`, getAuthHeaders())
+        return response.data
+    } catch (error) {
+        throw error.response?.data || new Error('Failed to delete route stop')
+    }
+}
