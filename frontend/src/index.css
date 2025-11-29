@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-gray-50 text-gray-800; }
+
+/* Dark theme */
+[data-theme="dark"] body { @apply bg-gray-900 text-gray-100 }
+[data-theme="dark"] .card { @apply bg-gray-800 }
+[data-theme="dark"] .muted { @apply text-gray-400 }
+[data-theme="dark"] .form-input { @apply bg-gray-700 text-gray-100 border-gray-600 }
+[data-theme="dark"] .heading { @apply text-white }
+
+/* App utilities */
+.app-container { @apply max-w-7xl mx-auto px-4 }
+.card { @apply bg-white rounded shadow p-4 border border-gray-200 }
+.muted { @apply text-gray-500 }
+.form-input { @apply w-full p-2 border rounded }
+.heading { @apply text-2xl font-semibold }
+
+/* Admin specific */
+.admin-sidebar { @apply w-72 bg-gray-800 text-white min-h-screen p-4 }
+.admin-header { @apply bg-white border-b }
+.app-container { @apply max-w-7xl mx-auto px-4 }
+[data-theme="dark"] .card { @apply bg-gray-800 border border-gray-700 }
+
+/* Custom Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
